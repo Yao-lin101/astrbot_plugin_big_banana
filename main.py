@@ -933,9 +933,9 @@ class BigBanana(Star):
                             final_meme_file = convert_to_gif(meme_file, meme_manager)
                             img = Comp.Image.fromFileSystem(final_meme_file)
                             object.__setattr__(img, "sub_type", 1)
-                            await event.send(
-                                MessageChain([Comp.Plain(clean_text), img])
-                            )
+                            if clean_text:
+                                await event.send(MessageChain([Comp.Plain(clean_text)]))
+                            await event.send(MessageChain([img]))
                             sent_meme = True
             except Exception as e:
                 logger.warning(f"[BIG BANANA] 尝试从 meme_manager 获取表情包失败: {e}")
