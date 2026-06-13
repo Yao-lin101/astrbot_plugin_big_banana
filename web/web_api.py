@@ -34,6 +34,24 @@ class BigBananaWebApi:
             ["GET"],
             "获取可用的模型供应商",
         )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/substitutions",
+            self.api_substitutions_get,
+            ["GET"],
+            "获取人设头像替换列表",
+        )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/substitutions",
+            self.api_substitutions_set,
+            ["POST"],
+            "更新人设头像替换列表",
+        )
+        self.context.register_web_api(
+            f"/{PLUGIN_NAME}/upload_image",
+            self.api_upload_image,
+            ["POST"],
+            "上传人设参考图片",
+        )
 
     async def api_config_get(self):
         """GET handler: return the current configuration as JSON."""
@@ -85,3 +103,74 @@ class BigBananaWebApi:
         except Exception as e:
             self.logger.exception(f"Failed to get providers list: {e}")
             return jsonify({"status": "ok", "data": []})
+
+    async def api_substitutions_get(self):
+        """GET handler: return the current avatar substitutions from the JSON file."""
+        try:
+            substitutions = {}
+            import json
+            import os
+
+            path = self.plugin.refer_images_dir.parent / "avatar_substitutions.json"
+            if os.path.exists(path):
+                try:
+                    with open(path, encoding="utf-8") as f:
+                        substitutions = json.load(f)
+                except Exception:
+                    self.logger.warning(
+                        "Failed to parse avatar_substitutions.json, defaulting to empty."
+                    )
+            return jsonify({"status": "ok", "data": substitutions})
+        except Exception as e:
+            self.logger.exception(f"Failed to get substitutions: {e}")
+            return jsonify({"status": "error", "message": str(e)})
+
+    async def api_substitutions_set(self):
+        """POST handler: update and save avatar substitutions map."""
+        try:
+            body = await qreq.get_json()
+            if not isinstance(body, dict):
+                return jsonify(
+                    {"status": "error", "message": "Request body must be a JSON object"}
+                )
+
+            import json
+
+            path = self.plugin.refer_images_dir.parent / "avatar_substitutions.json"
+
+            # Save mapping to file
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(body, f, indent=4, ensure_ascii=False)
+
+            # Reload configuration in the plugin memory
+            self.plugin.refresh_config()
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            self.logger.exception(f"Failed to save substitutions: {e}")
+            return jsonify({"status": "error", "message": str(e)})
+
+    async def api_upload_image(self):
+        """POST handler: receive an uploaded file and save it to refer_images directory."""
+        try:
+            files = await qreq.files
+            file = files.get("file")
+            if not file:
+                return jsonify({"status": "error", "message": "No file uploaded"})
+
+            # Secure filename and prevent path traversal
+            import os
+
+            filename = os.path.basename(file.filename)
+            if not filename:
+                import uuid
+
+                filename = f"upload_{uuid.uuid4().hex}.jpg"
+
+            os.makedirs(self.plugin.refer_images_dir, exist_ok=True)
+            file_path = self.plugin.refer_images_dir / filename
+            await file.save(str(file_path))
+
+            return jsonify({"status": "ok", "data": {"filename": filename}})
+        except Exception as e:
+            self.logger.exception(f"Failed to upload image: {e}")
+            return jsonify({"status": "error", "message": str(e)})

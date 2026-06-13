@@ -24,6 +24,7 @@
     <button class="tab-btn" onclick="switchTab('whitelist')">白名单与存储</button>
     <button class="tab-btn" onclick="switchTab('hosting')">图床设置</button>
     <button class="tab-btn" onclick="switchTab('advanced')">高级与其它</button>
+    <button class="tab-btn" onclick="switchTab('persona_replace')">人设替换</button>
   </nav>
 
   <!-- 1. Preset Prompts Panel -->
@@ -225,14 +226,7 @@
       </div>
     </div>
 
-    <div class="config-card">
-      <h2 class="section-title">Bot 人设参考图片</h2>
-      <div class="hint-text" style="margin-bottom: 12px;">
-        当艾特或提及机器人时，随机选择此列表中的一张参考图片代替其真实 QQ 头像。支持本地文件名（放在 refer_images 目录下）或图片 URL。
-      </div>
-      <div class="list-container" id="bot-persona-refs-list"></div>
-      <button class="add-btn" onclick="addPersonaRefItem()">＋ 添加人设参考图片</button>
-    </div>
+
 
     <div class="config-card">
       <h2 class="section-title">函数调用工具</h2>
@@ -357,6 +351,18 @@
       </div>
       <div class="list-container" id="alias-list"></div>
       <button class="add-btn" onclick="addAliasItem()">＋ 添加别名映射</button>
+    </div>
+  </div>
+
+  <!-- 8. Persona Replace Panel -->
+  <div class="tab-panel" id="tab-persona_replace">
+    <div class="config-card">
+      <h2 class="section-title">人设头像替换</h2>
+      <div class="hint-text" style="margin-bottom: 16px;">
+        配置目标 ID (如机器人 QQ 号、用户 QQ 号，或别名 "bot"、"self") 与对应的参考头像图片列表。当触发时，系统会随机从中选择一张头像。支持输入图片 URL，或直接上传本地图片。
+      </div>
+      <div class="list-container" id="persona-replace-list"></div>
+      <button class="add-btn" onclick="addPersonaReplaceItem()">＋ 添加人设替换规则</button>
     </div>
   </div>
 </div>

@@ -115,6 +115,19 @@ class BigBanana(Star):
         # Image persistence
         self.save_images = self.conf.get("save_images", {}).get("local_save", False)
 
+        # Load custom avatar substitutions mapping from separate JSON file
+        self.avatar_substitutions_map = {}
+        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana")
+        sub_path = data_dir / "avatar_substitutions.json"
+        if sub_path.exists():
+            import json
+
+            try:
+                with open(sub_path, encoding="utf-8") as f:
+                    self.avatar_substitutions_map = json.load(f)
+            except Exception:
+                logger.warning("[BIG BANANA] Failed to load avatar_substitutions.json")
+
         # Update sub-configurations if instantiated
         if hasattr(self, "downloader"):
             self.preference_config = PreferenceConfig(
@@ -800,8 +813,38 @@ class BigBanana(Star):
 
         if referer_id is None:
             referer_id = []
-        # Local bot reference images list
+        # Local substitution reference images list
         bot_local_refs = []
+
+        # Helper function to substitute avatar if configured
+        def get_substituted_image(target_id: str) -> tuple[str | None, str | None]:
+            target_id = str(target_id).strip()
+            self_id = str(event.get_self_id())
+
+            ref_imgs = None
+            if target_id in self.avatar_substitutions_map:
+                ref_imgs = self.avatar_substitutions_map[target_id]
+            elif target_id == self_id:
+                for key in (self_id, "bot", "self"):
+                    if key in self.avatar_substitutions_map:
+                        ref_imgs = self.avatar_substitutions_map[key]
+                        break
+            elif target_id in ("bot", "self"):
+                for key in (self_id, "bot", "self"):
+                    if key in self.avatar_substitutions_map:
+                        ref_imgs = self.avatar_substitutions_map[key]
+                        break
+
+            if ref_imgs:
+                import random
+
+                chosen = random.choice(ref_imgs)
+                if chosen.startswith("http"):
+                    return chosen, None
+                else:
+                    return None, chosen
+            return None, None
+
         # Flag to optimize At avatar by skipping it if At target is reply sender
         skipped_at_qq = False
         reply_sender_id = ""
@@ -843,17 +886,12 @@ class BigBanana(Star):
                     skipped_at_qq = True
                     continue
 
-                # Substitute bot avatar with persona reference images if configured
-                if qq == self_id and self.preference_config.bot_persona_references:
-                    import random
-
-                    ref_img = random.choice(
-                        self.preference_config.bot_persona_references
-                    )
-                    if ref_img.startswith("http"):
-                        image_urls.append(ref_img)
-                    else:
-                        bot_local_refs.append(ref_img)
+                # Substitute target avatar if substitution mapping exists
+                sub_url, sub_file = get_substituted_image(qq)
+                if sub_url:
+                    image_urls.append(sub_url)
+                elif sub_file:
+                    bot_local_refs.append(sub_file)
                 else:
                     image_urls.append(f"https://q.qlogo.cn/g?b=qq&s=0&nk={comp.qq}")
             elif isinstance(comp, Comp.Image) and comp.url:
@@ -871,22 +909,13 @@ class BigBanana(Star):
             for target_id in referer_id:
                 target_id = target_id.strip()
                 if target_id:
-                    self_id = str(event.get_self_id())
-                    # Substitute bot avatar with persona reference images if configured
-                    if (
-                        target_id == self_id
-                        and self.preference_config.bot_persona_references
-                    ):
-                        import random
-
-                        ref_img = random.choice(
-                            self.preference_config.bot_persona_references
-                        )
-                        if ref_img.startswith("http"):
-                            if ref_img not in image_urls:
-                                image_urls.append(ref_img)
-                        else:
-                            bot_local_refs.append(ref_img)
+                    # Substitute target avatar if substitution mapping exists
+                    sub_url, sub_file = get_substituted_image(target_id)
+                    if sub_url:
+                        if sub_url not in image_urls:
+                            image_urls.append(sub_url)
+                    elif sub_file:
+                        bot_local_refs.append(sub_file)
                     else:
                         build_url = f"https://q.qlogo.cn/g?b=qq&s=0&nk={target_id}"
                         if build_url not in image_urls:

@@ -69,22 +69,99 @@ function addAliasItem(data) {
   container.appendChild(card);
 }
 
-// Helper to add a dynamic bot persona reference item card
-function addPersonaRefItem(value) {
-  value = value || '';
-  var container = document.getElementById('bot-persona-refs-list');
+// Helper to add a dynamic persona substitution rule card
+function addPersonaReplaceItem(targetId, imgList) {
+  targetId = targetId || '';
+  imgList = imgList || [];
+  var container = document.getElementById('persona-replace-list');
   var card = document.createElement('div');
-  card.className = 'list-item-card';
+  card.className = 'list-item-card persona-replace-card';
+  
+  // Generate a unique ID for this card to associate file inputs
+  var cardId = 'persona_card_' + Math.random().toString(36).substr(2, 9);
+  card.id = cardId;
+  
   card.innerHTML = `
     <button class="remove-btn" onclick="this.parentElement.remove()">&times;</button>
-    <div class="list-grid">
-      <div class="form-group" style="grid-column: span 3">
-        <label>文件名或图片 URL</label>
-        <input type="text" class="text-input persona-ref-value" value="${value}" placeholder="例如: bot_ref.jpg 或 https://example.com/bot.png">
+    <div class="list-grid" style="grid-template-columns: 1fr;">
+      <div class="form-group">
+        <label>目标 ID / 别名 (例如: 1234567, bot, self)</label>
+        <input type="text" class="text-input target-id-input" value="${targetId}" placeholder="输入 QQ 号或 bot / self">
+      </div>
+      <div class="form-group">
+        <label>参考图片列表</label>
+        <div class="images-sub-list" style="margin-top: 8px; display: flex; flex-direction: column; gap: 8px;">
+          <!-- Existing images go here -->
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 10px;">
+          <button class="btn btn-secondary btn-sm" onclick="addPersonaImageRow('${cardId}')" type="button">＋ 添加图片 URL</button>
+          <button class="btn btn-secondary btn-sm" onclick="triggerPersonaImageUpload('${cardId}')" type="button">＋ 上传本地图片</button>
+          <input type="file" id="file_${cardId}" style="display: none;" accept="image/*" onchange="handlePersonaImageUpload(this, '${cardId}')">
+        </div>
       </div>
     </div>
   `;
   container.appendChild(card);
+  
+  // Populate existing images
+  imgList.forEach(function(url) {
+    addPersonaImageRow(cardId, url);
+  });
+}
+
+// Helper to add a row to the image references inside a persona rule card
+function addPersonaImageRow(cardId, url) {
+  url = url || '';
+  var card = document.getElementById(cardId);
+  if (!card) return;
+  var list = card.querySelector('.images-sub-list');
+  var row = document.createElement('div');
+  row.className = 'image-row';
+  row.style.display = 'flex';
+  row.style.alignItems = 'center';
+  row.style.gap = '8px';
+  row.style.marginBottom = '6px';
+  row.innerHTML = `
+    <input type="text" class="text-input image-url-input" value="${url}" placeholder="图片 URL 或本地文件名">
+    <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove()" style="padding: 6px 10px; min-width: auto;" type="button">&times;</button>
+  `;
+  list.appendChild(row);
+}
+
+// Trigger input click for file upload
+function triggerPersonaImageUpload(cardId) {
+  var fileInput = document.getElementById('file_' + cardId);
+  if (fileInput) fileInput.click();
+}
+
+// Handle local image file upload and display the filename on success
+function handlePersonaImageUpload(fileInput, cardId) {
+  var file = fileInput.files[0];
+  if (!file) return;
+
+  var SDK = window.AstrBotPluginPage;
+  if (!SDK || !SDK.upload) {
+    showToast('SDK upload function not available');
+    return;
+  }
+
+  showToast('正在上传图片...');
+  SDK.upload('upload_image', file)
+    .then(function (res) {
+      var data = parseResponse(res);
+      if (data && data.filename) {
+        addPersonaImageRow(cardId, data.filename);
+        showToast('图片上传成功');
+      } else {
+        throw new Error(res.message || '未知错误');
+      }
+    })
+    .catch(function (err) {
+      showToast('图片上传失败: ' + err.message);
+    })
+    .finally(function () {
+      fileInput.value = ''; // clear input
+    });
 }
 
 // Helper to add a dynamic whitelist item card (for users or groups)
@@ -144,10 +221,12 @@ function loadData() {
 
   Promise.all([
     SDK.apiGet('config'),
-    SDK.apiGet('providers')
+    SDK.apiGet('providers'),
+    SDK.apiGet('substitutions')
   ]).then(function (results) {
     config = parseResponse(results[0]) || {};
     providers = parseResponse(results[1]) || [];
+    var substitutions = parseResponse(results[2]) || {};
 
     // Populate providers list selects if any exists
     // Bind base checkboxes and inputs
@@ -255,12 +334,14 @@ function loadData() {
       addPrefixItem(val);
     });
 
-    // Render bot persona reference images list
-    var botPersonaRefsList = document.getElementById('bot-persona-refs-list');
-    botPersonaRefsList.innerHTML = '';
-    (pref.bot_persona_references || []).forEach(function (val) {
-      addPersonaRefItem(val);
-    });
+    // Render avatar substitutions list
+    var personaReplaceList = document.getElementById('persona-replace-list');
+    personaReplaceList.innerHTML = '';
+    for (var targetId in substitutions) {
+      if (substitutions.hasOwnProperty(targetId)) {
+        addPersonaReplaceItem(targetId, substitutions[targetId]);
+      }
+    }
 
     // Initialize all custom sliders UI display
     initSliders();
@@ -338,17 +419,11 @@ function saveAll() {
   };
 
   // Build preference_config object
-  var botPersonaRefs = [];
-  document.querySelectorAll('#bot-persona-refs-list .persona-ref-value').forEach(function (input) {
-    var val = input.value.trim();
-    if (val) botPersonaRefs.push(val);
-  });
   updatedConfig.preference_config = {
     skip_at_first: document.getElementById('pref_skip_at_first').checked,
     skip_quote_first: document.getElementById('pref_skip_quote_first').checked,
     skip_llm_at_first: document.getElementById('pref_skip_llm_at_first').checked,
-    drawing_message: document.getElementById('pref_drawing_message').value.trim(),
-    bot_persona_references: botPersonaRefs
+    drawing_message: document.getElementById('pref_drawing_message').value.trim()
   };
 
   // Build llm_tool_settings object
@@ -409,14 +484,35 @@ function saveAll() {
   });
   updatedConfig.params_alias_map = aliasList;
 
+  // Build substitutions mapping from persona replace list cards
+  var substitutionsMap = {};
+  document.querySelectorAll('#persona-replace-list .persona-replace-card').forEach(function (card) {
+    var targetId = card.querySelector('.target-id-input').value.trim();
+    if (!targetId) return;
+    var imgUrls = [];
+    card.querySelectorAll('.image-url-input').forEach(function (input) {
+      var val = input.value.trim();
+      if (val) imgUrls.push(val);
+    });
+    substitutionsMap[targetId] = imgUrls;
+  });
+
   // Save via endpoint
-  SDK.apiPost('config', updatedConfig)
-    .then(function (result) {
-      if (result && result.status === 'ok') {
+  Promise.all([
+    SDK.apiPost('config', updatedConfig),
+    SDK.apiPost('substitutions', substitutionsMap)
+  ])
+    .then(function (results) {
+      var configRes = results[0];
+      var subsRes = results[1];
+      if (configRes && configRes.status === 'ok' && subsRes && subsRes.status === 'ok') {
         config = updatedConfig;
         showToast('配置已保存并立即生效');
       } else {
-        throw new Error(result ? result.message : '保存失败');
+        var errMsg = [];
+        if (!configRes || configRes.status !== 'ok') errMsg.push(configRes ? configRes.message : '基本配置保存失败');
+        if (!subsRes || subsRes.status !== 'ok') errMsg.push(subsRes ? subsRes.message : '人设替换保存失败');
+        throw new Error(errMsg.join('; '));
       }
     })
     .catch(function (err) {
