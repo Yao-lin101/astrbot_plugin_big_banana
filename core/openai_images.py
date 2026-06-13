@@ -296,6 +296,7 @@ class OpenAIImagesProvider(BaseProvider):
                 url=self._build_api_url(provider_config.api_url, "edits"),
                 headers=headers,
                 multipart=multipart,
+                http_version="v1",
                 timeout=self.def_common_config.timeout,
                 proxy=self.def_common_config.proxy,
             )
