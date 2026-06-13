@@ -118,13 +118,16 @@ function promptPersonaImageUrl(cardId) {
 }
 
 // Helper to add a row to the image references inside a persona rule card
-function addPersonaImageRow(cardId, url) {
+function addPersonaImageRow(cardId, url, overrideDisplayUrl) {
   if (!url) return;
   var card = document.getElementById(cardId);
   if (!card) return;
   var list = card.querySelector('.images-sub-list');
+  
+  var rowId = 'img_row_' + Math.random().toString(36).substr(2, 9);
   var row = document.createElement('div');
   row.className = 'image-row';
+  row.id = rowId;
   row.style.position = 'relative';
   row.style.display = 'inline-block';
   row.style.width = '80px';
@@ -135,17 +138,33 @@ function addPersonaImageRow(cardId, url) {
   row.style.background = 'var(--input-bg)';
   row.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.05)';
   
-  var displayUrl = url;
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    displayUrl = '/api/plug/astrbot_plugin_big_banana/image/' + encodeURIComponent(url);
-  }
+  var isUrl = url.startsWith('http://') || url.startsWith('https://');
+  var displayUrl = overrideDisplayUrl || (isUrl ? url : '');
   
   row.innerHTML = `
-    <img src="${displayUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="avatar">
+    <img src="${displayUrl}" style="width: 100%; height: 100%; object-fit: cover;" alt="avatar" class="avatar-preview">
     <input type="hidden" class="image-url-input" value="${url}">
     <button class="remove-btn" onclick="this.parentElement.remove()" style="position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; font-size: 10px; padding: 0; display: flex; align-items: center; justify-content: center; background: rgba(255, 59, 48, 0.85); color: white; border-radius: 50%; border: none; cursor: pointer; font-weight: bold; transition: background 0.2s;" type="button" onmouseover="this.style.background='rgba(255, 59, 48, 1)'" onmouseout="this.style.background='rgba(255, 59, 48, 0.85)'">&times;</button>
   `;
   list.appendChild(row);
+
+  // If local file and no override URL is provided, fetch it asynchronously via API
+  if (!isUrl && !overrideDisplayUrl) {
+    var SDK = window.AstrBotPluginPage;
+    if (SDK) {
+      SDK.apiGet('image', { filename: url })
+        .then(function (res) {
+          var data = parseResponse(res);
+          if (data && data.base64) {
+            var img = row.querySelector('.avatar-preview');
+            if (img) img.src = data.base64;
+          }
+        })
+        .catch(function (err) {
+          console.error('Failed to load local image preview:', err);
+        });
+    }
+  }
 }
 
 // Trigger input click for file upload
@@ -176,7 +195,7 @@ function handlePersonaImageUpload(fileInput, cardId) {
       .then(function (res) {
         var data = parseResponse(res);
         if (data && data.filename) {
-          addPersonaImageRow(cardId, data.filename);
+          addPersonaImageRow(cardId, data.filename, base64Data);
           showToast('图片上传成功');
         } else {
           throw new Error(res.message || '未知错误');

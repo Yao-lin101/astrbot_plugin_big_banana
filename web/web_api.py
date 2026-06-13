@@ -53,7 +53,7 @@ class BigBananaWebApi:
             "上传人设参考图片",
         )
         self.context.register_web_api(
-            f"/{PLUGIN_NAME}/image/<filename>",
+            f"/{PLUGIN_NAME}/image",
             self.api_serve_image,
             ["GET"],
             "获取人设参考图片内容",
@@ -202,20 +202,33 @@ class BigBananaWebApi:
             self.logger.exception(f"Failed to upload image: {e}")
             return jsonify({"status": "error", "message": str(e)})
 
-    async def api_serve_image(self, filename):
-        """GET handler: serve an image file from the refer_images directory."""
+    async def api_serve_image(self):
+        """GET handler: return base64 encoded data of an image file from the refer_images directory."""
         try:
+            filename = qreq.args.get("filename", "")
+            if not filename:
+                return jsonify({"status": "error", "message": "Missing filename"})
+
+            import base64
+            import mimetypes
             import os
 
-            from quart import send_file
-
-            # Secure filename and prevent path traversal
             filename = os.path.basename(filename)
             file_path = self.plugin.refer_images_dir / filename
             if not file_path.exists():
                 return jsonify({"status": "error", "message": "File not found"}), 404
 
-            return await send_file(str(file_path))
+            with open(file_path, "rb") as f:
+                file_bytes = f.read()
+
+            mime_type, _ = mimetypes.guess_type(str(file_path))
+            if not mime_type:
+                mime_type = "image/jpeg"
+
+            b64_data = base64.b64encode(file_bytes).decode("utf-8")
+            data_url = f"data:{mime_type};base64,{b64_data}"
+
+            return jsonify({"status": "ok", "data": {"base64": data_url}})
         except Exception as e:
             self.logger.exception(f"Failed to serve image: {e}")
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({"status": "error", "message": str(e)})
