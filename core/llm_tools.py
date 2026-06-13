@@ -140,7 +140,8 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
                 "prompt": {
                     "type": "string",
                     "description": ("Detailed image description. Refine user input with explicit physical actions, "
-"facial expressions, background elements, and lighting atmosphere."),
+"facial expressions, background elements, and lighting atmosphere. "
+"If the user hasn't specified an art style, you may optionally choose one matching your persona."),
                 },
                 "preset_name": {
                     "type": "string",
@@ -187,6 +188,22 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
             )
             return "该用户不在白名单内，无法使用图片生成功能。"
 
+        # 冷却时间判断
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(plugin.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = plugin.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(
+                    f"[BIG BANANA] 群 {group_id} 处于冷却中，剩余 {remaining} 秒"
+                )
+                return f"当前群处于画图冷却中，冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+
         # 必须提供 prompt 或 preset_name 参数
         if not prompt and not preset_name:
             logger.warning("[BIG BANANA] prompt 参数不能为空")
@@ -227,6 +244,13 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
                 url_only=bool(params.get("url", False)),
             )
             await event.send(MessageChain(chain=msg_chain))
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                plugin.group_cooldowns[group_id] = time.time()
+
             # 告知模型图片已发送
             logger.info("[BIG BANANA] 图片生成成功，已直接发送给用户")
             return (
@@ -260,7 +284,8 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
 "IMPORTANT: Do NOT invent or describe visual appearance details (like hair color, clothing) for referenced characters (especially the bot itself / the AI assistant), as their appearance is taken from their avatars. "
 "Instead, focus on actions, poses, expressions, and background. "
 "Link referenced characters to images by explicitly referring to them as 'the character in image 1' and 'the character in image 2' matching the order of IDs in referer_id. "
-"Example: If referer_id is [bot_id, user_id], write 'The character in image 1 (bot) is feeding the character in image 2 (user) dinner'."),
+"Example: If referer_id is [bot_id, user_id], write 'The character in image 1 (bot) is feeding the character in image 2 (user) dinner'. "
+"If the user hasn't specified an art style, you may optionally choose one matching your persona."),
                 },
                 "referer_id": {
                     "type": "array",
@@ -314,6 +339,22 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
             )
             return "该用户不在白名单内，无法使用图片生成功能。"
 
+        # 冷却时间判断
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(plugin.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = plugin.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(
+                    f"[BIG BANANA] 群 {group_id} 处于冷却中，剩余 {remaining} 秒"
+                )
+                return f"当前群处于画图冷却中，冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+
         # 必须提供 prompt 或 preset_name 参数
         if not prompt and not preset_name:
             logger.warning("[BIG BANANA] prompt 参数不能为空")
@@ -362,6 +403,13 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
                 url_only=bool(params.get("url", False)),
             )
             await event.send(MessageChain(chain=msg_chain))
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                plugin.group_cooldowns[group_id] = time.time()
+
             # 告知模型图片已发送
             logger.info("[BIG BANANA] 图片生成成功，已直接发送给用户")
             return (

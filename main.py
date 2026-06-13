@@ -71,49 +71,99 @@ class BigBanana(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
         self.conf = config
-        # 初始化常规配置和图片生成配置
+        self.refresh_config()
+
+        # Data directory setup
+        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana")
+        self.refer_images_dir = data_dir / "refer_images"
+        self.save_dir = data_dir / "save_images"
+        # Temporary file directory
+        self.temp_dir = data_dir / "temp_images"
+
+        # Active task mapping
+        self.running_tasks: dict[str, asyncio.Task] = {}
+
+        # Cooldown mapping per group: {group_id: timestamp}
+        self.group_cooldowns: dict[str, float] = {}
+
+        # Instantiate Web API and register routes
+        from .web.web_api import BigBananaWebApi
+
+        self.web_api = BigBananaWebApi(self)
+        self.web_api.register_routes()
+
+    def refresh_config(self):
+        """Refresh configuration attributes from updated self.conf."""
+        # Initialize regular configuration and image generation configuration
         self.common_config = CommonConfig(**self.conf.get("common_config", {}))
         self.prompt_config = PromptConfig(**self.conf.get("prompt_config", {}))
-        # 参数别名列表
+        # Parameter alias list
         self.params_alias = self.conf.get("params_alias_map", {})
-        # 初始化提示词配置
+        # Initialize prompt configuration
         self.init_prompts()
-        # 白名单配置
+        # Whitelist configuration
         self.whitelist_config = self.conf.get("whitelist_config", {})
-        # 群组白名单，列表是引用类型
+        # Group whitelist
         self.group_whitelist_enabled = self.whitelist_config.get("enabled", False)
         self.group_whitelist = self.whitelist_config.get("whitelist", [])
-        # 用户白名单
+        # User whitelist
         self.user_whitelist_enabled = self.whitelist_config.get("user_enabled", False)
         self.user_whitelist = self.whitelist_config.get("user_whitelist", [])
 
-        # 前缀配置
+        # Prefix configuration
         prefix_config = self.conf.get("prefix_config", {})
         self.coexist_enabled = prefix_config.get("coexist_enabled", False)
         self.prefix_list = prefix_config.get("prefix_list", [])
 
-        # 数据目录
-        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana")
-        self.refer_images_dir = data_dir / "refer_images"
-        self.save_dir = data_dir / "save_images"
-        # 临时文件目录
-        self.temp_dir = data_dir / "temp_images"
-
-        # 图片持久化
+        # Image persistence
         self.save_images = self.conf.get("save_images", {}).get("local_save", False)
 
-        # 正在运行的任务映射
-        self.running_tasks: dict[str, asyncio.Task] = {}
+        # Load custom avatar substitutions mapping from separate JSON file
+        self.avatar_substitutions_map = {}
+        data_dir = StarTools.get_data_dir("astrbot_plugin_big_banana")
+        sub_path = data_dir / "avatar_substitutions.json"
+        if sub_path.exists():
+            import json
+
+            try:
+                with open(sub_path, encoding="utf-8") as f:
+                    self.avatar_substitutions_map = json.load(f)
+            except Exception:
+                logger.warning("[BIG BANANA] Failed to load avatar_substitutions.json")
+
+        # Update sub-configurations if instantiated
+        if hasattr(self, "downloader"):
+            self.preference_config = PreferenceConfig(
+                **self.conf.get("preference_config", {})
+            )
+            self.image_hosting_config = ImageHostingConfig(
+                **self.conf.get("image_hosting", {})
+            )
+            self.downloader.common_config = self.common_config
+            self.image_hoster.config = self.image_hosting_config
+
+        # Check and update LLM tools registry dynamically
+        if getattr(self, "context", None):
+            remove_tools(self.context)
+            if self.conf.get("llm_tool_settings", {}).get("llm_tool_enabled", False):
+                self.context.add_llm_tools(BigBananaReferenceTool(plugin=self))
+                logger.info(
+                    "已注册函数调用工具: banana_image_generation_with_reference"
+                )
+                self.context.add_llm_tools(BigBananaAvatarTool(plugin=self))
+                logger.info("已注册函数调用工具: banana_image_generation_with_avatar")
+                self.context.add_llm_tools(BigBananaPromptTool(plugin=self))
+                logger.info("已注册函数调用工具: banana_preset_prompt")
 
     async def initialize(self):
-        """可选择实现异步的插件初始化方法，当实例化该插件类之后会自动调用该方法。"""
-        # 初始化文件目录
+        """Optional async initialization method called after class instantiation."""
+        # Initialize file directories
         os.makedirs(self.refer_images_dir, exist_ok=True)
         os.makedirs(self.temp_dir, exist_ok=True)
         if self.save_images:
             os.makedirs(self.save_dir, exist_ok=True)
 
-        # 实例化类
+        # Instantiate services
         self.preference_config = PreferenceConfig(
             **self.conf.get("preference_config", {})
         )
@@ -126,10 +176,10 @@ class BigBanana(Star):
         self.downloader = Downloader(curl_session, self.common_config)
         self.image_hoster = R2ImageHoster(aiohttp_session, self.image_hosting_config)
 
-        # 注册提供商类型实例
+        # Register provider type instances
         self.init_providers()
 
-        # 检查配置是否启用函数调用工具
+        # Register function calling tools if enabled
         if self.conf.get("llm_tool_settings", {}).get("llm_tool_enabled", False):
             self.context.add_llm_tools(BigBananaReferenceTool(plugin=self))
             logger.info("已注册函数调用工具: banana_image_generation_with_reference")
@@ -615,6 +665,28 @@ class BigBanana(Star):
             logger.info(f"用户 {event.get_sender_id()} 不在白名单内，跳过处理")
             return
 
+        # 冷却时间判断 (Group Cooldown)
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(self.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = self.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(f"群 {group_id} 处于画图冷却中，剩余时间: {remaining} 秒")
+                yield event.chain_result(
+                    [
+                        Comp.Reply(id=event.message_obj.message_id),
+                        Comp.Plain(
+                            f"❌ 冷却中！该群画图冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+                        ),
+                    ]
+                )
+                return
+
         # 获取提示词配置 (使用 .copy() 防止修改污染全局预设)
         params = self.prompt_dict.get(cmd, {}).copy()
         # 先从预设提示词参数字典字典中取出提示词
@@ -742,6 +814,12 @@ class BigBanana(Star):
             )
 
             yield event.chain_result(msg_chain)
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                self.group_cooldowns[group_id] = time.time()
         except asyncio.CancelledError:
             logger.info(f"{task_id} 任务被取消")
             return
@@ -766,7 +844,39 @@ class BigBanana(Star):
 
         if referer_id is None:
             referer_id = []
-        # 小标记，用于优化At头像。当At对象是被引用消息的发送者时，跳过一次。
+        # Local substitution reference images list
+        bot_local_refs = []
+
+        # Helper function to substitute avatar if configured
+        def get_substituted_image(target_id: str) -> tuple[str | None, str | None]:
+            target_id = str(target_id).strip()
+            self_id = str(event.get_self_id())
+
+            ref_imgs = None
+            if target_id in self.avatar_substitutions_map:
+                ref_imgs = self.avatar_substitutions_map[target_id]
+            elif target_id == self_id:
+                for key in (self_id, "bot", "self"):
+                    if key in self.avatar_substitutions_map:
+                        ref_imgs = self.avatar_substitutions_map[key]
+                        break
+            elif target_id in ("bot", "self"):
+                for key in (self_id, "bot", "self"):
+                    if key in self.avatar_substitutions_map:
+                        ref_imgs = self.avatar_substitutions_map[key]
+                        break
+
+            if ref_imgs:
+                import random
+
+                chosen = random.choice(ref_imgs)
+                if chosen.startswith("http"):
+                    return chosen, None
+                else:
+                    return None, chosen
+            return None, None
+
+        # Flag to optimize At avatar by skipping it if At target is reply sender
         skipped_at_qq = False
         reply_sender_id = ""
         for comp in event.get_messages():
@@ -782,31 +892,39 @@ class BigBanana(Star):
                         and quote.url.lower().endswith(SUPPORTED_FILE_FORMATS_WITH_DOT)
                     ):
                         image_urls.append(quote.url)
-            # 处理At对象的QQ头像（对于艾特机器人的问题，还没有特别好的解决方案）
+            # Process At targets
             elif (
                 isinstance(comp, Comp.At)
                 and comp.qq
                 and event.platform_meta.name == "aiocqhttp"
             ):
                 qq = str(comp.qq)
-                self_id = event.get_self_id()
+                self_id = str(event.get_self_id())
                 if not skipped_at_qq and (
-                    # 如果At对象是被引用消息的发送者，跳过一次
+                    # If At target is the reply sender, skip once
                     (qq == reply_sender_id and self.preference_config.skip_quote_first)
                     or (
                         qq == self_id
                         and event.is_at_or_wake_command
                         and self.preference_config.skip_at_first
-                    )  # 通过At唤醒机器人，跳过一次
+                    )  # Skipped first At wake
                     or (
                         qq == self_id
                         and self.preference_config.skip_llm_at_first
                         and is_llm_tool
-                    )  # 通过At唤醒机器人，且是函数调用工具，跳过一次
+                    )  # Skipped first At tool invocation
                 ):
                     skipped_at_qq = True
                     continue
-                image_urls.append(f"https://q.qlogo.cn/g?b=qq&s=0&nk={comp.qq}")
+
+                # Substitute target avatar if substitution mapping exists
+                sub_url, sub_file = get_substituted_image(qq)
+                if sub_url:
+                    image_urls.append(sub_url)
+                elif sub_file:
+                    bot_local_refs.append(sub_file)
+                else:
+                    image_urls.append(f"https://q.qlogo.cn/g?b=qq&s=0&nk={comp.qq}")
             elif isinstance(comp, Comp.Image) and comp.url:
                 image_urls.append(comp.url)
             elif (
@@ -817,31 +935,49 @@ class BigBanana(Star):
             ):
                 image_urls.append(comp.url)
 
-        # 处理referer_id参数，获取指定用户头像
+        # Process referer_id argument and fetch user avatars
         if is_llm_tool and referer_id and event.platform_meta.name == "aiocqhttp":
             for target_id in referer_id:
                 target_id = target_id.strip()
                 if target_id:
-                    build_url = f"https://q.qlogo.cn/g?b=qq&s=0&nk={target_id}"
-                    if build_url not in image_urls:
-                        image_urls.append(
-                            f"https://q.qlogo.cn/g?b=qq&s=0&nk={target_id}"
-                        )
+                    # Substitute target avatar if substitution mapping exists
+                    sub_url, sub_file = get_substituted_image(target_id)
+                    if sub_url:
+                        if sub_url not in image_urls:
+                            image_urls.append(sub_url)
+                    elif sub_file:
+                        bot_local_refs.append(sub_file)
+                    else:
+                        build_url = f"https://q.qlogo.cn/g?b=qq&s=0&nk={target_id}"
+                        if build_url not in image_urls:
+                            image_urls.append(build_url)
 
         min_required_images = params.get("min_images", self.prompt_config.min_images)
         max_allowed_images = params.get("max_images", self.prompt_config.max_images)
-        # 如果图片数量不满足最小要求，且消息平台是Aiocqhttp，取消息发送者头像作为参考图片
+        # If total images are less than minimum required, fall back to sender avatar
         if (
-            len(image_urls) < min_required_images
+            len(image_urls) + len(bot_local_refs) < min_required_images
             and event.platform_meta.name == "aiocqhttp"
         ):
             image_urls.append(
                 f"https://q.qlogo.cn/g?b=qq&s=0&nk={event.get_sender_id()}"
             )
 
-        # 图片b64列表
+        # Base64 images list
         image_b64_list: list[tuple[str, str]] = []
-        # 处理 refer_images 参数
+
+        # Load local bot reference images first
+        for filename in bot_local_refs:
+            if len(image_b64_list) >= max_allowed_images:
+                break
+            filename = filename.strip()
+            if filename:
+                path = self.refer_images_dir / filename
+                mime_type, b64_data = await asyncio.to_thread(read_file, path)
+                if mime_type and b64_data:
+                    image_b64_list.append((mime_type, b64_data))
+
+        # Load refer_images configurations
         refer_images = params.get("refer_images", self.prompt_config.refer_images)
         if refer_images:
             for filename in refer_images.split(","):
