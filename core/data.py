@@ -109,6 +109,8 @@ class PreferenceConfig:
     """ 跳过第一次引用@ """
     skip_llm_at_first: bool = False
     """ 跳过第一次LLM@ """
+    drawing_message: str = "🎨 在画了，请稍等一会..."
+    """ 图片生成中提示消息 """
 
 
 @dataclass(repr=False, slots=True)

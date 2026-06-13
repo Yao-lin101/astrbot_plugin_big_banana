@@ -870,7 +870,7 @@ class BigBanana(Star):
             )
 
         # 发送绘图中提示
-        await event.send(MessageChain().message("🎨 在画了，请稍等一会..."))
+        await event.send(MessageChain().message(self.preference_config.drawing_message))
 
         # 调度提供商生成图片
         images_result, err, result_urls = await self._dispatch(
