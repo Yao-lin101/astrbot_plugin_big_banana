@@ -111,6 +111,8 @@ class PreferenceConfig:
     """ 跳过第一次LLM@ """
     drawing_message: str = "🎨 在画了，请稍等一会..."
     """ 图片生成中提示消息 """
+    group_cooldown: int = 0
+    """ 群组冷却时间(秒) """
 
 
 @dataclass(repr=False, slots=True)

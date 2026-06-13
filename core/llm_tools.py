@@ -187,6 +187,22 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
             )
             return "该用户不在白名单内，无法使用图片生成功能。"
 
+        # 冷却时间判断
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(plugin.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = plugin.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(
+                    f"[BIG BANANA] 群 {group_id} 处于冷却中，剩余 {remaining} 秒"
+                )
+                return f"当前群处于画图冷却中，冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+
         # 必须提供 prompt 或 preset_name 参数
         if not prompt and not preset_name:
             logger.warning("[BIG BANANA] prompt 参数不能为空")
@@ -227,6 +243,13 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
                 url_only=bool(params.get("url", False)),
             )
             await event.send(MessageChain(chain=msg_chain))
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                plugin.group_cooldowns[group_id] = time.time()
+
             # 告知模型图片已发送
             logger.info("[BIG BANANA] 图片生成成功，已直接发送给用户")
             return (
@@ -314,6 +337,22 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
             )
             return "该用户不在白名单内，无法使用图片生成功能。"
 
+        # 冷却时间判断
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(plugin.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = plugin.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(
+                    f"[BIG BANANA] 群 {group_id} 处于冷却中，剩余 {remaining} 秒"
+                )
+                return f"当前群处于画图冷却中，冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+
         # 必须提供 prompt 或 preset_name 参数
         if not prompt and not preset_name:
             logger.warning("[BIG BANANA] prompt 参数不能为空")
@@ -362,6 +401,13 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
                 url_only=bool(params.get("url", False)),
             )
             await event.send(MessageChain(chain=msg_chain))
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                plugin.group_cooldowns[group_id] = time.time()
+
             # 告知模型图片已发送
             logger.info("[BIG BANANA] 图片生成成功，已直接发送给用户")
             return (

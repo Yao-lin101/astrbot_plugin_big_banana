@@ -83,6 +83,9 @@ class BigBanana(Star):
         # Active task mapping
         self.running_tasks: dict[str, asyncio.Task] = {}
 
+        # Cooldown mapping per group: {group_id: timestamp}
+        self.group_cooldowns: dict[str, float] = {}
+
         # Instantiate Web API and register routes
         from .web.web_api import BigBananaWebApi
 
@@ -662,6 +665,28 @@ class BigBanana(Star):
             logger.info(f"用户 {event.get_sender_id()} 不在白名单内，跳过处理")
             return
 
+        # 冷却时间判断 (Group Cooldown)
+        group_id = event.get_group_id()
+        cooldown_seconds = getattr(self.preference_config, "group_cooldown", 0)
+        if group_id and cooldown_seconds > 0:
+            import time
+
+            last_sent_time = self.group_cooldowns.get(group_id, 0)
+            now = time.time()
+            elapsed = now - last_sent_time
+            if elapsed < cooldown_seconds:
+                remaining = int(cooldown_seconds - elapsed)
+                logger.info(f"群 {group_id} 处于画图冷却中，剩余时间: {remaining} 秒")
+                yield event.chain_result(
+                    [
+                        Comp.Reply(id=event.message_obj.message_id),
+                        Comp.Plain(
+                            f"❌ 冷却中！该群画图冷却时间为 {cooldown_seconds} 秒，剩余 {remaining} 秒，请稍后再试。"
+                        ),
+                    ]
+                )
+                return
+
         # 获取提示词配置 (使用 .copy() 防止修改污染全局预设)
         params = self.prompt_dict.get(cmd, {}).copy()
         # 先从预设提示词参数字典字典中取出提示词
@@ -789,6 +814,12 @@ class BigBanana(Star):
             )
 
             yield event.chain_result(msg_chain)
+
+            # 记录成功后的冷却时间
+            if group_id and cooldown_seconds > 0:
+                import time
+
+                self.group_cooldowns[group_id] = time.time()
         except asyncio.CancelledError:
             logger.info(f"{task_id} 任务被取消")
             return

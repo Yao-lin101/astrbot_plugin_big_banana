@@ -224,6 +224,15 @@
         <label for="pref_drawing_message">生成中提示消息</label>
         <input type="text" class="text-input" id="pref_drawing_message" placeholder="🎨 在画了，请稍等一会...">
       </div>
+
+      <div class="form-group">
+        <label for="pref_group_cooldown">群组画图冷却时间 (秒)</label>
+        <div class="slider-container">
+          <input type="range" class="slider-input" id="pref_group_cooldown" min="0" max="600" step="5" oninput="updateSliderValue(this)">
+          <span class="slider-value" id="val-pref_group_cooldown">0s</span>
+        </div>
+        <div class="hint-text">控制每个群组使用画画命令或工具的冷却间隔时间，0 为不限制。</div>
+      </div>
     </div>
 
 
