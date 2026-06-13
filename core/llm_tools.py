@@ -18,7 +18,11 @@ from astrbot.core.platform.astr_message_event import AstrMessageEvent
 
 from .utils import clear_cache
 
-TOOLS_NAMESPACE = ["banana_preset_prompt", "banana_image_generation"]
+TOOLS_NAMESPACE = [
+    "banana_preset_prompt",
+    "banana_image_generation_with_reference",
+    "banana_image_generation_with_avatar",
+]
 
 if TYPE_CHECKING:
     from ..main import BigBanana
@@ -120,56 +124,157 @@ class BigBananaPromptTool(FunctionTool[AstrAgentContext]):
 
 
 @dataclass
-class BigBananaTool(FunctionTool[AstrAgentContext]):
+class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
     plugin: Any = None
-    name: str = "banana_image_generation"  # 工具名称
+    name: str = "banana_image_generation_with_reference"  # 工具名称
     # fmt: off
     description: str = (
-"This tool uses the Nano Banana Pro model for image generation."
-"It supports both text-based generation and image-reference generation. When a user requests"
-"generation based on an image, you must first verify whether a valid image is present"
-"in the user's current message or in the message they are replying to. Textual pointers"
-'such as "that one" "the one above" or similar expressions are not acceptable as valid'
-"image inputs. The user must provide an actual image file for the request to proceed."
-"In special cases, if the image needs to reference specific users' avatars (such as the sender's own avatar,"
-"the bot's own avatar, or another mentioned user's avatar), you can pass their IDs to the referer_id parameter."
-"The tool will download their avatars and use them as reference images."
-"Prioritize the tool response as the highest priority event,"
-"taking precedence over chat history.")  # 工具描述
+"Generate images from text prompts or reference chat images. "
+"If the user wants to draw/edit based on an image, verify that a real image file is present in the current or replied message. "
+"Textual references like 'that image' are invalid. "
+"Do NOT use this tool for avatar-based interactions (use banana_image_generation_with_avatar instead).")  # 工具描述
     parameters: dict = Field(
         default_factory=lambda: {
             "type": "object",
             "properties": {
                 "prompt": {
                     "type": "string",
-                    "description": ("Refine the image generation prompt to ensure it is clear,"
-"detailed, and accurately aligned with the user's intent by elaborating on the visual elements"
-"in a logical sequence that explicitly describes specific physical actions, nuanced facial"
-"expressions, and the overall color scheme with lighting atmosphere. This parameter must be"
-"populated with the full, descriptive prompt content rather than just a preset name,"
-"even if derived from one, to guarantee the generation of a vivid and strictly defined image."
-"IMPORTANT: If reference avatars are provided via referer_id, do NOT describe or invent specific visual appearance details"
-"(such as hair color, clothing style, or facial features) of those referenced characters in the prompt (especially the bot itself / the AI assistant),"
-"since their visual identity will be derived directly from the reference images. Doing so will cause conflicts."
-"Instead, focus on describing their actions, poses, interactions, expressions, and the background setting."),
+                    "description": ("Detailed image description. Refine user input with explicit physical actions, "
+"facial expressions, background elements, and lighting atmosphere."),
                 },
                 "preset_name": {
                     "type": "string",
-                    "description": ("When filling in this parameter for the first time,"
-"you also need to use banana_preset_prompt tool to retrieve the full content of"
-"that preset prompt. If your prompt is a modification based on a preset prompt,"
-"this field must retain the original preset name so the tool can retrieve"
-"the correct generation parameters."),
+                    "description": ("Use to retrieve preset prompts via banana_preset_prompt. "
+"Keep original preset name if modifying based on a preset."),
+                },
+            },
+            "required": ["prompt"],
+        }
+    )
+    # fmt: on
+    async def call(
+        self,
+        context: ContextWrapper[AstrAgentContext],  # type: ignore
+        **kwargs,
+    ) -> ToolExecResult:
+        if self.plugin is None:
+            logger.warning("[BIG BANANA] 插件未初始化完成，无法处理请求")
+            return "BigBanana 插件未初始化完成，请稍后再试。"
+        plugin: BigBanana = self.plugin
+        event: AstrMessageEvent = context.context.event  # type: ignore
+
+        # 获取参数
+        prompt = kwargs.get("prompt", "anything")
+        preset_name = kwargs.get("preset_name", None)
+
+        # 群白名单判断
+        if (
+            plugin.group_whitelist_enabled
+            and event.unified_msg_origin not in plugin.group_whitelist
+        ):
+            logger.info(
+                f"[BIG BANANA] 群 {event.unified_msg_origin} 不在白名单内，跳过处理"
+            )
+            return "当前群不在白名单内，无法使用图片生成功能。"
+
+        # 用户白名单判断
+        if (
+            plugin.user_whitelist_enabled
+            and event.get_sender_id() not in plugin.user_whitelist
+        ):
+            logger.info(
+                f"[BIG BANANA] 用户 {event.get_sender_id()} 不在白名单内，跳过处理"
+            )
+            return "该用户不在白名单内，无法使用图片生成功能。"
+
+        # 必须提供 prompt 或 preset_name 参数
+        if not prompt and not preset_name:
+            logger.warning("[BIG BANANA] prompt 参数不能为空")
+            return "prompt 参数不能为空，请提供有效的提示词。"
+
+        params = {}
+        if preset_name:
+            if preset_name not in plugin.prompt_dict:
+                logger.warning(f"[BIG BANANA] 未找到预设提示词：「{preset_name}」")
+                return f"未找到预设提示词：「{preset_name}」，请使用有效的预设名称。"
+            else:
+                params = plugin.prompt_dict.get(preset_name, {})
+        if prompt:
+            params["prompt"] = prompt
+        if "{{user_text}}" in prompt:
+            logger.warning("[BIG BANANA] 提示词中包含未替换的占位符 {{user_text}}")
+            return (
+                "提示词中包含未替换的占位符 {{user_text}}，请将其替换为用户提供的文本。"
+            )
+
+        logger.info(f"[BIG BANANA] 生成图片提示词: {prompt[:128]}")
+
+        # 创建后台任务
+        task = asyncio.create_task(plugin.job(event, params, is_llm_tool=True))
+        task_id = event.message_obj.message_id
+        plugin.running_tasks[task_id] = task
+        try:
+            results, err_msg = await task
+            result_urls = getattr(task, "result_urls", None)
+            if err_msg:
+                return err_msg or "图片生成失败，未返回任何结果。"
+
+            # 组装消息链
+            msg_chain: list[BaseMessageComponent] = plugin.build_message_chain(
+                event,
+                results or [],
+                result_urls=result_urls,
+                url_only=bool(params.get("url", False)),
+            )
+            await event.send(MessageChain(chain=msg_chain))
+            # 告知模型图片已发送
+            logger.info("[BIG BANANA] 图片生成成功，已直接发送给用户")
+            return (
+                "图片生成完成，已发送给用户。请直接回复用户消息，禁止重复调用函数工具。"
+            )
+        except asyncio.CancelledError:
+            logger.info(f"[BIG BANANA] {task_id} 任务被取消")
+            return "图片生成任务被取消"
+        finally:
+            plugin.running_tasks.pop(task_id, None)
+            # 目前只有 telegram 平台需要清理缓存
+            if event.platform_meta.name == "telegram":
+                clear_cache(plugin.temp_dir)
+
+
+@dataclass
+class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
+    plugin: Any = None
+    name: str = "banana_image_generation_with_avatar"  # 工具名称
+    # fmt: off
+    description: str = (
+"Generate images involving characters using their chat avatars (sender, bot, or mentioned users) as reference images. "
+"Pass their user IDs (QQ numbers) to referer_id.")  # 工具描述
+    parameters: dict = Field(
+        default_factory=lambda: {
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": ("Detailed scene description. "
+"IMPORTANT: Do NOT invent or describe visual appearance details (like hair color, clothing) for referenced characters (especially the bot itself / the AI assistant), as their appearance is taken from their avatars. "
+"Instead, focus on actions, poses, expressions, and background. "
+"Link referenced characters to images by explicitly referring to them as 'the character in image 1' and 'the character in image 2' matching the order of IDs in referer_id. "
+"Example: If referer_id is [bot_id, user_id], write 'The character in image 1 (bot) is feeding the character in image 2 (user) dinner'."),
                 },
                 "referer_id": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": ("An array of user IDs (QQ numbers) whose avatars should be used as reference images"
-"for the generation. You can include multiple IDs (e.g., the sender's ID, the bot's own ID, or any other mentioned user's ID)"
-"when the image involves multiple characters (e.g., 'feed me', 'hug me'). Pass this parameter together with the prompt parameter."),
+                    "description": ("Array of user IDs (QQ numbers) whose avatars should be used as reference images. "
+"Include multiple IDs (sender ID, bot ID, etc.) for interactive scenes."),
+                },
+                "preset_name": {
+                    "type": "string",
+                    "description": ("Use to retrieve preset prompts via banana_preset_prompt. "
+"Keep original preset name if modifying based on a preset."),
                 },
             },
-            "required": ["prompt"],
+            "required": ["prompt", "referer_id"],
         }
     )
     # fmt: on

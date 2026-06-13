@@ -19,7 +19,12 @@ from .core.data import (
     PromptConfig,
     ProviderConfig,
 )
-from .core.llm_tools import BigBananaPromptTool, BigBananaTool, remove_tools
+from .core.llm_tools import (
+    BigBananaAvatarTool,
+    BigBananaPromptTool,
+    BigBananaReferenceTool,
+    remove_tools,
+)
 from .core.utils import clear_cache, read_file, save_images
 
 # 提示词参数列表
@@ -120,8 +125,10 @@ class BigBanana(Star):
 
         # 检查配置是否启用函数调用工具
         if self.conf.get("llm_tool_settings", {}).get("llm_tool_enabled", False):
-            self.context.add_llm_tools(BigBananaTool(plugin=self))
-            logger.info("已注册函数调用工具: banana_image_generation")
+            self.context.add_llm_tools(BigBananaReferenceTool(plugin=self))
+            logger.info("已注册函数调用工具: banana_image_generation_with_reference")
+            self.context.add_llm_tools(BigBananaAvatarTool(plugin=self))
+            logger.info("已注册函数调用工具: banana_image_generation_with_avatar")
             self.context.add_llm_tools(BigBananaPromptTool(plugin=self))
             logger.info("已注册函数调用工具: banana_preset_prompt")
 
