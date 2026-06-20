@@ -45,6 +45,14 @@ def save_images(
 
 def read_file(path) -> tuple[str | None, str | None]:
     try:
+        path_str = str(path)
+        if path_str.startswith("/AstrBot/"):
+            workspace_root = Path(__file__).resolve().parents[4]
+            path = Path(path_str.replace("/AstrBot/", str(workspace_root) + "/", 1))
+        elif path_str.startswith("AstrBot/"):
+            workspace_root = Path(__file__).resolve().parents[4]
+            path = Path(path_str.replace("AstrBot/", str(workspace_root) + "/", 1))
+
         with open(path, "rb") as f:
             file_data = f.read()
             mime_type, _ = mimetypes.guess_type(path)
@@ -93,6 +101,14 @@ def copy_local_file(src: str, temp_dir: Path) -> str:
     path = src
     if path.startswith("file://"):
         path = urllib.request.url2pathname(urllib.parse.urlparse(path).path)
+
+    # Rewrite /AstrBot/ to the actual workspace root path dynamically
+    if path.startswith("/AstrBot/"):
+        workspace_root = Path(__file__).resolve().parents[4]
+        path = path.replace("/AstrBot/", str(workspace_root) + "/", 1)
+    elif path.startswith("AstrBot/"):
+        workspace_root = Path(__file__).resolve().parents[4]
+        path = path.replace("AstrBot/", str(workspace_root) + "/", 1)
 
     src_path = Path(path)
     if src_path.exists() and src_path.is_file():
