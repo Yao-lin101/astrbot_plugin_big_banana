@@ -103,7 +103,7 @@ class NewAPIImagesProvider(BaseProvider):
             draw_params["noise_schedule"] = params["noise_schedule"]
 
         # Map reference images based on ref_type
-        ref_type = params.get("ref_type", "character")
+        ref_type = params.get("ref_type", "i2i")
         if image_b64_list:
             if ref_type == "character":
                 # Precise character reference, up to 1 image
