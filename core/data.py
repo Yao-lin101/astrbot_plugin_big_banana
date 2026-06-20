@@ -14,6 +14,7 @@ _API_Type = Literal[
     "OpenAI_Images",
     "Agnes_Images",
     "Vertex_AI_Anonymous",
+    "NewAPI_Images",
 ]
 
 # 支持的文件格式
@@ -179,6 +180,15 @@ PARAMS_LIST = [
     "url",
     "sub_brain",
     "moderation",
+    "negative_prompt",
+    "steps",
+    "sampler",
+    "seed",
+    "image_format",
+    "variety_boost",
+    "cfg_rescale",
+    "noise_schedule",
+    "ref_type",
 ]
 
 # 部分平台对单张图片大小有限制，超过限制需要作为文件发送

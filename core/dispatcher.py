@@ -156,6 +156,21 @@ class ProviderDispatcher:
                 or (model_name and "agnes" in model_name.lower())
             )
 
+            is_newapi = (
+                "newapi" in native_type
+                or "newapi" in prov_id_val.lower()
+                or "newapi" in prov_name_val.lower()
+                or "newapi" in api_base_val.lower()
+                or (
+                    model_name
+                    and (
+                        "nai-diffusion" in model_name.lower()
+                        or "novelai" in model_name.lower()
+                        or "newapi" in model_name.lower()
+                    )
+                )
+            )
+
             if "gemini" in native_type or "google" in native_type:
                 api_type = "Gemini"
                 api_base = native_prov.provider_config.get("api_base")
@@ -163,6 +178,18 @@ class ProviderDispatcher:
                     api_url = api_base.rstrip("/")
                 else:
                     api_url = "https://generativelanguage.googleapis.com/v1beta/models"
+            elif is_newapi:
+                api_type = "NewAPI_Images"
+                api_base = native_prov.provider_config.get("api_base") or ""
+                url = api_base.rstrip("/")
+                if not url.endswith("/chat/completions"):
+                    if url.endswith("/v1"):
+                        url = f"{url}/chat/completions"
+                    elif url.endswith("/chat"):
+                        url = f"{url}/completions"
+                    else:
+                        url = f"{url}/v1/chat/completions"
+                api_url = url
             elif is_agnes:
                 api_type = "Agnes_Images"
                 api_base = api_base_val
