@@ -63,11 +63,19 @@ class ProviderDispatcher:
         # 2. 按顺序遍历提供商列表尝试生成
         for p_id in provider_ids:
             native_prov = None
+            model_override = None
             if p_id is not None:
+                # If p_id is formatted as provider_id/model, parse it
+                p_id_search = p_id
+                if "/" in p_id:
+                    parts = p_id.split("/", 1)
+                    p_id_search = parts[0]
+                    model_override = parts[1]
+
                 try:
                     native_prov = (
                         await self.plugin.context.provider_manager.get_provider_by_id(
-                            p_id
+                            p_id_search
                         )
                     )
                     if not native_prov:
@@ -75,9 +83,9 @@ class ProviderDispatcher:
                         inst_map = getattr(
                             self.plugin.context.provider_manager, "inst_map", {}
                         )
+                        p_id_lower = p_id_search.lower()
                         for k, inst in inst_map.items():
                             k_lower = k.lower()
-                            p_id_lower = p_id.lower()
                             if k_lower == p_id_lower or k_lower.startswith(
                                 p_id_lower + "/"
                             ):
@@ -129,7 +137,8 @@ class ProviderDispatcher:
             native_keys = native_prov.get_keys()
 
             model_name = (
-                params.get("model")
+                model_override
+                or params.get("model")
                 or native_prov.get_model()
                 or native_prov.provider_config.get("model", "")
             )
