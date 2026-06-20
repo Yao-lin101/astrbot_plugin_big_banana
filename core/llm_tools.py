@@ -232,6 +232,10 @@ class BigBananaReferenceTool(FunctionTool[AstrAgentContext]):
 
         logger.info(f"[BIG BANANA] 生成图片提示词: {prompt[:128]}")
 
+        from .utils import prepare_temp_dir_and_copy_images
+
+        prepare_temp_dir_and_copy_images(plugin, event, params)
+
         # 创建后台任务
         task = asyncio.create_task(plugin.job(event, params, is_llm_tool=True))
         plugin.running_tasks[session_id] = task
@@ -383,6 +387,10 @@ class BigBananaAvatarTool(FunctionTool[AstrAgentContext]):
             )
 
         logger.info(f"[BIG BANANA] 生成图片提示词: {prompt[:128]}")
+
+        from .utils import prepare_temp_dir_and_copy_images
+
+        prepare_temp_dir_and_copy_images(plugin, event, params)
 
         # 创建后台任务
         task = asyncio.create_task(

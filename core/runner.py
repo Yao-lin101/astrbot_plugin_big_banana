@@ -16,7 +16,13 @@ from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.utils.session_waiter import SessionController, session_waiter
 
 from .data import MAX_SIZE_B64_LEN, SUPPORTED_FILE_FORMATS_WITH_DOT
-from .utils import clear_cache, copy_local_file, read_file, save_images
+from .utils import (
+    clear_cache,
+    copy_local_file,
+    prepare_temp_dir_and_copy_images,
+    read_file,
+    save_images,
+)
 
 if TYPE_CHECKING:
     from ..main import BigBanana
@@ -312,27 +318,7 @@ async def handle_on_message(
     # 获取提示词配置 (使用 .copy() 防止修改污染全局预设)
     params = plugin.prompt_dict.get(cmd, {}).copy()
 
-    session_id = event.unified_msg_origin
-    task_temp_dir = plugin.temp_dir / f"task_{session_id}_{int(time.time())}"
-    os.makedirs(task_temp_dir, exist_ok=True)
-    params["task_temp_dir"] = task_temp_dir
-
-    # Copy all local temp images of this event to task_temp_dir so they don't get deleted early
-    for comp in event.get_messages():
-        if isinstance(comp, Comp.Image) and comp.url:
-            comp.url = copy_local_file(comp.url, task_temp_dir)
-            if comp.file:
-                comp.file = comp.url
-            if comp.path:
-                comp.path = comp.url
-        elif isinstance(comp, Comp.Reply) and comp.chain:
-            for quote in comp.chain:
-                if isinstance(quote, Comp.Image) and quote.url:
-                    quote.url = copy_local_file(quote.url, task_temp_dir)
-                    if quote.file:
-                        quote.file = quote.url
-                    if quote.path:
-                        quote.path = quote.url
+    task_temp_dir = prepare_temp_dir_and_copy_images(plugin, event, params)
 
     # 先从预设提示词参数字典字典中取出提示词
     preset_prompt = params.get("prompt", "{{user_text}}")

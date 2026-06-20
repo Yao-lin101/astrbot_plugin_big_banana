@@ -127,3 +127,43 @@ def copy_local_file(src: str, temp_dir: Path) -> str:
             )
 
     return src
+
+
+def prepare_temp_dir_and_copy_images(plugin, event, params) -> Path:
+    """Prepare a task-specific temp directory and copy event's local temp images to it.
+
+    Args:
+        plugin: The plugin instance.
+        event: The message event.
+        params: The params dictionary.
+
+    Returns:
+        The task-specific temp directory Path.
+    """
+    import os
+    import time
+
+    import astrbot.api.message_components as Comp
+
+    session_id = event.unified_msg_origin
+    task_temp_dir = plugin.temp_dir / f"task_{session_id}_{int(time.time())}"
+    os.makedirs(task_temp_dir, exist_ok=True)
+    params["task_temp_dir"] = task_temp_dir
+
+    for comp in event.get_messages():
+        if isinstance(comp, Comp.Image) and comp.url:
+            comp.url = copy_local_file(comp.url, task_temp_dir)
+            if comp.file:
+                comp.file = comp.url
+            if comp.path:
+                comp.path = comp.url
+        elif isinstance(comp, Comp.Reply) and comp.chain:
+            for quote in comp.chain:
+                if isinstance(quote, Comp.Image) and quote.url:
+                    quote.url = copy_local_file(quote.url, task_temp_dir)
+                    if quote.file:
+                        quote.file = quote.url
+                    if quote.path:
+                        quote.path = quote.url
+
+    return task_temp_dir
