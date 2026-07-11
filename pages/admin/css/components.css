@@ -1,4 +1,4 @@
-/* Form controls, sliders, switches, buttons, dynamic cards, whitelists, and overlays */
+/* 表单控件、滑块、开关、按钮、动态卡片、白名单和遮罩层 */
 
 .config-card {
   padding: 28px;
@@ -51,6 +51,14 @@ html[data-theme="dark"] .form-group.checkbox-row { background: rgba(255, 255, 25
   outline: none;
   transition: all .25s;
 }
+.select-input option {
+  background-color: #ffffff;
+  color: #1d1d1f;
+}
+html[data-theme="dark"] .select-input option {
+  background-color: #1c1c1e;
+  color: #f5f5f7;
+}
 .text-input:focus, .select-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);
@@ -84,7 +92,7 @@ textarea.textarea-input:focus {
   box-shadow: 0 0 0 3px var(--accent-light);
 }
 
-/* Custom Slider styling */
+/* 自定义滑块样式 */
 .slider-container { display: flex; align-items: center; gap: 12px; }
 .slider-input {
   flex: 1;
@@ -113,7 +121,7 @@ textarea.textarea-input:focus {
   color: var(--accent);
 }
 
-/* iOS-style toggle switch */
+/* iOS 风格开关 */
 .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .switch-slider {
@@ -138,7 +146,7 @@ textarea.textarea-input:focus {
 input:checked + .switch-slider { background-color: var(--success); }
 input:checked + .switch-slider:before { transform: translateX(20px); }
 
-/* Buttons styling */
+/* 按钮样式 */
 .btn {
   padding: 11px 24px;
   border: none;
@@ -168,7 +176,7 @@ input:checked + .switch-slider:before { transform: translateX(20px); }
 .btn-cancel { background: var(--segment-bg); color: var(--text2); min-width: auto; }
 .btn-cancel:hover { background: var(--input-bg); }
 
-/* Form Helpers and Dynamic Lists */
+/* 表单辅助样式和动态列表 */
 .hint-text { font-size: 11px; color: var(--text2); margin-top: 4px; line-height: 1.4; }
 .list-container { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
 .list-item-card {
@@ -222,7 +230,7 @@ html[data-theme="dark"] .list-item-card { background: rgba(255, 255, 255, 0.01);
 }
 .add-btn:hover { background: var(--accent-light); }
 
-/* Footer and Toast Notification Bar */
+/* 底部操作栏和提示条 */
 .footer-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;

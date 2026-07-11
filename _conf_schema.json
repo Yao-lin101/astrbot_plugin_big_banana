@@ -6,24 +6,670 @@
             "bnn {{user_text}} --min_images 1",
             "bnt {{user_text}} --min_images 0",
             "bna {{user_text}} --min_images 0 --gather_mode",
+            "llm_default {{user_text}} --min_images 0 --max_images 6 --aspect_ratio default --image_size 1K --google_search true --gather_mode false --n 1 --partial_images 0 --size default --url false --moderation auto",
             "手办化 Create a premium, collectible 1/7 scale standalone figurine based on the image, meticulously replicating the character, made from smooth PVC and ABS plastic with a professional matte finish. It stands on a minimalist transparent acrylic base. Next to it is its retail packaging box displaying the price and brand information, with the figure wrapped in plastic inside the slightly larger box. They are naturally arranged on a clean wooden table surrounded by reference books, with a bookshelf in the background and soft afternoon sunlight streaming through the window. Photo-realistic, DSLR effect, depth of field, bokeh background."
         ],
-        "hint": "格式1: 触发词 提示词 --参数1 参数值1 --参数2 参数值2。格式2: [触发词1,触发词2] 提示词 --参数1 参数值1 --参数2 参数值2。触发词和触发词列表不能有空格。若省略参数值，则视为布尔值true。占位提示词：{{user_text}}，占位提示词会被消息内容覆盖，用于自定义提示词，可以在占位提示词前后添加固定的预设提示词。可选的参数请参考 README.md。触发词冲突可能会相互覆盖。"
+        "hint": "格式1: 触发词 提示词 --参数1 参数值1 --参数2 参数值2。格式2: [触发词1,触发词2] 提示词 --参数1 参数值1 --参数2 参数值2。触发词和触发词列表不能有空格。若省略参数值，则视为布尔值true。占位提示词{{user_text}}：占位提示词会被消息内容覆盖，可以在占位提示词前后添加固定的预设提示词。可选的参数请参考 README.md。触发词冲突可能会相互覆盖。"
     },
-    "image_generation_providers": {
-        "description": "绘图 AI 提供商（按优先级多选）",
+    "provider_template": {
+        "type": "template_list",
+        "description": "提供商",
+        "hint": "添加提供商配置",
+        "default": [
+            {
+                "__template_key": "vertex_ai_anonymous",
+                "provider_type": "Vertex_AI_Anonymous",
+                "capability": "image_generation",
+                "enabled": true,
+                "name": "Vertex_AI_Anonymous",
+                "enabled_as_default": true,
+                "fallback_order": 0,
+                "base_url": "https://cloudconsole-pa.clients6.google.com",
+                "recaptcha_base_api": "https://www.google.com",
+                "system_prompt": "",
+                "max_retry": 10,
+                "retry_delay": 2.0,
+                "model": "gemini-3-pro-image-preview",
+                "response_modalities": "['IMAGE']",
+                "enable_proxy": false
+            }
+        ],
+        "templates": {
+            "vertex_ai_anonymous": {
+                "name": "Vertex_AI_Anonymous",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "Vertex_AI_Anonymous",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": true,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称区分大小写，必须唯一。用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "vertex_ai_anonymous"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": true,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://cloudconsole-pa.clients6.google.com",
+                        "hint": "可以在这里配置反向代理"
+                    },
+                    "recaptcha_base_api": {
+                        "description": "Recaptcha Base API",
+                        "type": "string",
+                        "default": "https://www.google.com",
+                        "hint": "可以在这里配置反向代理"
+                    },
+                    "system_prompt": {
+                        "description": "系统提示词",
+                        "type": "text",
+                        "default": "",
+                        "hint": "留空将不传递这个参数。"
+                    },
+                    "max_retry": {
+                        "description": "最大重试次数",
+                        "type": "int",
+                        "default": 10,
+                        "hint": "独立于常规接口的重试次数配置。"
+                    },
+                    "retry_delay": {
+                        "description": "重试延迟",
+                        "type": "float",
+                        "default": 2,
+                        "hint": "较大的重试延迟或许可以规避短时间内的集中失败的问题，单位：秒"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "gemini-3-pro-image-preview",
+                        "hint": "默认 gemini-3-pro-image-preview"
+                    },
+                    "response_modalities": {
+                        "description": "响应模式",
+                        "type": "string",
+                        "options": [
+                            "['TEXT','IMAGE']",
+                            "['TEXT']",
+                            "['IMAGE']",
+                            "无"
+                        ],
+                        "default": "['IMAGE']",
+                        "hint": "图片生成模型不传递 \"IMAGE\" 可能会报错；有些模型不能传递响应模式，否则也会报错。选择「无」将不传递。"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "gemini": {
+                "name": "Gemini",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "Gemini",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "gemini"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://generativelanguage.googleapis.com",
+                        "hint": "不需要填写 /v1beta 路径"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "gemini-3-pro-image",
+                        "hint": "默认 gemini-3-pro-image"
+                    },
+                    "response_modalities": {
+                        "description": "响应模式",
+                        "type": "string",
+                        "options": [
+                            "['TEXT','IMAGE']",
+                            "['TEXT']",
+                            "['IMAGE']",
+                            "无"
+                        ],
+                        "default": "['IMAGE']",
+                        "hint": "图片生成模型不传递 \"IMAGE\" 可能会报错；有些模型不能传递响应模式，否则也会报错。选择「无」将不传递。"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "openai_chat": {
+                "name": "OpenAI_Chat",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "OpenAI_Chat",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "openai_chat"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://api.openai.com/v1",
+                        "hint": "按照惯例，这个base url通常需要补上/v1。"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "gpt-image-2",
+                        "hint": "默认 gpt-image-2"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "openai_images": {
+                "name": "OpenAI_Images",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "OpenAI_Images",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "openai_images"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://api.openai.com/v1",
+                        "hint": "按照惯例，这个base url通常需要补上/v1。插件会自动根据有无图片分别路由到 images/generations 或者 images/edits 后端"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "gpt-image-2",
+                        "hint": "默认 gpt-image-2"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "minimax_images": {
+                "name": "MiniMax_Images",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "MiniMax_Images",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "minimax_images"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://api.minimax.io/v1",
+                        "hint": "MiniMax 图片生成接口。填写到 /v1 即可，插件会自动拼接 image_generation；也可以直接填写完整 /v1/image_generation。"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "image-01",
+                        "hint": "默认 image-01，minimax仅支持1张参考图"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "openai_responses": {
+                "name": "OpenAI_Responses",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "OpenAI_Responses",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "openai_responses"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://api.openai.com/v1",
+                        "hint": "按照惯例，这个base url通常需要补上/v1。"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "gpt-5.5",
+                        "hint": "Responses API 需填写支持 image_generation 工具的主线模型，例如 gpt-5.5"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "siliconflow_images": {
+                "name": "SiliconFlow_Images",
+                "hint": "硅基流动图片生成接口。参考图最多传递 3 张。",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "SiliconFlow_Images",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "siliconflow_images"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://api.siliconflow.cn/v1",
+                        "hint": "填写到 /v1 即可，插件会自动拼接 images/generations；也可以直接填写完整 /v1/images/generations。"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "Kwai-Kolors/Kolors",
+                        "hint": "默认 Kwai-Kolors/Kolors"
+                    },
+                    "image_size": {
+                        "description": "分辨率",
+                        "type": "string",
+                        "default": "1024x1024",
+                        "hint": "例如 1024x1024、960x1280、1664x928。留空或提示词指定 --image_size default 时不传递。"
+                    },
+                    "batch_size": {
+                        "description": "生成图片数量",
+                        "type": "int",
+                        "default": 1,
+                        "hint": "请求字段为 batch_size；提示词中可用 --n 覆盖。"
+                    },
+                    "negative_prompt": {
+                        "description": "负向提示词",
+                        "type": "string",
+                        "default": "",
+                        "hint": "留空将不传递。提示词中可用 --negative_prompt 覆盖。提示词中可用英文逗号代替空格，后端会转成空格。"
+                    },
+                    "num_inference_steps": {
+                        "description": "推理步数",
+                        "type": "int",
+                        "default": 20,
+                        "hint": "留空将不传递。提示词中可用 --num_inference_steps 覆盖。"
+                    },
+                    "guidance_scale": {
+                        "description": "提示词引导强度",
+                        "type": "float",
+                        "default": 7.5,
+                        "hint": "留空将不传递。提示词中可用 --guidance_scale 覆盖。"
+                    },
+                    "seed": {
+                        "description": "随机种子",
+                        "type": "string",
+                        "default": "",
+                        "hint": "留空将不传递。提示词中可用 --seed 覆盖。"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            },
+            "agnes_images": {
+                "name": "Agnes_Images",
+                "items": {
+                    "provider_type": {
+                        "type": "str",
+                        "default": "Agnes_Images",
+                        "invisible": true
+                    },
+                    "capability": {
+                        "type": "str",
+                        "default": "image_generation",
+                        "invisible": true
+                    },
+                    "enabled": {
+                        "type": "bool",
+                        "description": "启用提供商",
+                        "default": false,
+                        "hint": "关闭后会静默跳过此提供商（包括默认提供商和参数指定）"
+                    },
+                    "name": {
+                        "description": "提供商名称",
+                        "hint": "名称必须唯一，用于索引提供商配置，留空将静默跳过此配置。",
+                        "type": "str",
+                        "default": "agnes_images"
+                    },
+                    "enabled_as_default": {
+                        "type": "bool",
+                        "description": "设为默认提供商",
+                        "default": false,
+                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                    },
+                    "fallback_order": {
+                        "description": "默认提供商优先级",
+                        "hint": "数字越小，优先级越高，会被 --providers 参数直接指定的提供商顺序覆盖。",
+                        "type": "int",
+                        "default": 0
+                    },
+                    "keys": {
+                        "description": "API密钥",
+                        "hint": "API Key列表。不需要填写Bearer 前缀，后端会自动拼接。每次请求打乱顺序依次重试。",
+                        "type": "list",
+                        "default": []
+                    },
+                    "base_url": {
+                        "description": "Base URL",
+                        "type": "string",
+                        "default": "https://apihub.agnes-ai.com/v1",
+                        "hint": "按照openai兼容端点惯例，这里记得补上/v1。"
+                    },
+                    "model": {
+                        "description": "模型",
+                        "type": "string",
+                        "default": "agnes-image-2.1-flash",
+                        "hint": "默认 agnes-image-2.1-flash"
+                    },
+                    "stream": {
+                        "description": "流式",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "需提供商支持"
+                    },
+                    "enable_proxy": {
+                        "description": "启用代理",
+                        "type": "bool",
+                        "default": false,
+                        "hint": "启用代理，需先在 '常规配置' 中配置代理地址"
+                    }
+                }
+            }
+        }
+    },
+    "default_astr_providers": {
+        "description": "原生默认提供商",
         "type": "list",
         "_special": "select_providers",
         "default": [],
-        "hint": "选择用于生成图片的模型提供商。若选择多个，第一个失败时会自动降级尝试后面的提供商。留空则跟随当前对话正在使用的服务商。"
+        "hint": "即使不在此选择提供商，也可以通过 --providers 参数直接指定原生配置的提供商。此项配置仅作为默认提供商的补充，原生提供商优先级固定为 0；排序时按优先级升序，同优先级下模板提供商先于原生提供商，模板提供商按配置文件顺序排列，原生提供商按本列表顺序排列。"
     },
-    "stream": {
-        "description": "启用流式响应",
-        "type": "bool",
-        "default": false,
-        "hint": "需要提供商支持绘图流式响应。"
-    },
-    "prompt_config": {
+    "params_config": {
         "description": "提示词默认参数",
         "type": "object",
         "hint": "若提示词中未指定参数，将使用这里的默认参数。自定义提示词也可以直接指定参数，记得带上空格。示例：bnn 提示词 --image_size 4K --google_search",
@@ -31,15 +677,40 @@
             "min_images": {
                 "description": "最小输入图片数量",
                 "type": "int",
-                "default": 1,
-                "hint": "如果消息携带的图片数量少于这个值，将自动添加At对象头像（At多个用户则可能添加多张，直到达到上限），如果仍然不够，继续添加发送者头像（仅Aiocqhttp），数量仍然不够将返回错误信息。"
+                "default": 0,
+                "hint": "必须为非负整数。若收集到的图片少于这个值，且为aiocqhttp、非工具调用，会自动收集发送者头像，图片不够将继续添加机器人头像。最终图片数量仍然不够，则返回错误信息。"
             },
             "max_images": {
                 "description": "最大输入图片数量",
                 "type": "int",
                 "default": 6,
-                "hint": "消息中携带的图片数量超过这个值n，只取前n张图片。Gemini API文档写了Gemini3最大支持14张图片输入，最佳实践是3张。"
+                "hint": "必须为非负整数。消息中的图片超过这个值 n，将自动截取前 n 张。具体提供商支持的输入图片上限请以对应提供商为准。"
             },
+            "refer_images": {
+                "description": "参考图片",
+                "type": "string",
+                "default": "",
+                "hint": "填写以逗号分隔的图片文件名（包含后缀），图片文件放在插件数据目录的 refer_images 文件夹下，会优先作为参考图传递给上下文。提示词参数使用: --refer_images 文件名1,文件名2"
+            },
+            "gather_mode": {
+                "description": "启用收集模式",
+                "type": "bool",
+                "default": false,
+                "hint": "启用后插件不会立即开始画图，允许用户连续发送多条消息，直到回复「开始」，才会将收集到的文本和图片用于图片生成。工具调用自动忽略此参数。"
+            },
+            "url": {
+                "description": "默认仅返回图片 URL",
+                "type": "bool",
+                "default": false,
+                "hint": "启用后，未在提示词中指定 --url 参数时，默认只返回图片 URL，不直接发送图片。提示词中的 --url true/false 可覆盖此默认值。"
+            }
+        }
+    },
+    "gemini_image_config": {
+        "description": "Gemini 参数配置",
+        "type": "object",
+        "hint": "通常仅Gemini和Vertex提供商类型使用，但是其他支持的提供商也能够读取",
+        "items": {
             "aspect_ratio": {
                 "description": "宽高比",
                 "type": "string",
@@ -69,26 +740,21 @@
                     "4K"
                 ],
                 "default": "1K",
-                "hint": "生成图片的分辨率，必须是大写的K。当前仅对Gemini规范的 gemini-3 模型有效"
+                "hint": "生成图片的分辨率，必须是大写的K。当前仅对 Gemini 规范的 gemini-3 模型有效"
             },
             "google_search": {
                 "description": "是否启用谷歌搜索工具",
                 "type": "bool",
                 "default": true,
-                "hint": "允许模型使用谷歌搜索工具获取实时信息。当前仅对Gemini规范的 gemini-3 模型有效"
-            },
-            "refer_images": {
-                "description": "参考图片",
-                "type": "string",
-                "default": "",
-                "hint": "填写格式是 文件名1,文件名2 把图片文件放在插件数据目录的 refer_images 文件夹下，这个参数指定的图片会优先传递给上下文。"
-            },
-            "gather_mode": {
-                "description": "启用收集模式",
-                "type": "bool",
-                "default": false,
-                "hint": "启用后插件不会立即开始画图，允许用户连续发送多条消息，直到回复「开始」，才会将收集到的文本和图片用于图片生成。"
-            },
+                "hint": "允许模型使用谷歌搜索工具获取实时信息。当前仅对 Gemini 规范的 gemini-3 模型有效"
+            }
+        }
+    },
+    "openai_image_config": {
+        "description": "OpenAI 参数配置",
+        "type": "object",
+        "hint": "通常仅OpenAI Images提供商类型使用，但是其他支持的提供商也能够读取",
+        "items": {
             "moderation": {
                 "description": "内容审核级别",
                 "type": "string",
@@ -98,13 +764,48 @@
                 ],
                 "default": "auto",
                 "hint": "GPT 图像编辑模型（如 gpt-image-*）的内容安全审核等级。设置为 low 可以降低内容过滤的敏感度。"
+            },
+            "size": {
+                "description": "分辨率",
+                "type": "string",
+                "options": [
+                    "default",
+                    "auto",
+                    "1536x1024",
+                    "1024x1536"
+                ],
+                "default": "default",
+                "hint": "生成图片的分辨率。填写default将由插件根据用户输入中的尺寸关键词和第一张图片自动判断，优先级：关键词>第一张图片。无图片输入且无关键字则默认为auto。"
+            },
+            "size_keyword_map": {
+                "description": "分辨率关键词映射",
+                "type": "list",
+                "default": [
+                    "手机,竖屏:1024x1536",
+                    "横屏,壁纸:1536x1024"
+                ],
+                "hint": "仅当分辨率为default时生效。格式：关键词1,关键词2:分辨率。例如 手机,竖屏:1024x1536。按列表顺序匹配，先匹配到的规则优先。"
+            },
+            "n": {
+                "description": "生成图片数量",
+                "type": "int",
+                "default": 1,
+                "hint": ""
+            },
+            "partial_images": {
+                "description": "流式预览图片数量",
+                "type": "int",
+                "default": 0,
+                "hint": "OpenAI Images 流式响应时返回的预览图数量，范围 0-3。0 表示仅返回最终图片。仅在启用流式响应时生效。"
             }
         }
     },
     "params_alias_map": {
         "description": "参数别名映射",
         "type": "list",
-        "default": ["append_mode:gather_mode"],
+        "default": [
+            "append_mode:gather_mode"
+        ],
         "hint": "格式是 自定义名称:内置参数名称 设置后使用自定义名称和内置参数名称皆可应用参数。参数名称冲突可能会相互覆盖。"
     },
     "common_config": {
@@ -117,12 +818,6 @@
                 "type": "bool",
                 "default": true,
                 "hint": "启用后将在预设提示词后追加用户输入文本。相当于给预设提示词末尾加上 {{user_text}} 占位符。若已有 {{user_text}} 占位符，则忽略。"
-            },
-            "text_response": {
-                "description": "启用文本响应",
-                "type": "bool",
-                "default": false,
-                "hint": "无论是否开启此项，插件都会静默忽略文本响应。仅Gemini规范有效。"
             },
             "smart_retry": {
                 "description": "启用智能重试",
@@ -146,7 +841,7 @@
                 "description": "HTTP代理",
                 "type": "string",
                 "default": "",
-                "hint": "格式示例：http://127.0.0.1:7890，对大部分接口请求启用（包括图片下载）。"
+                "hint": "格式示例：http://127.0.0.1:7890，填写此项不会导致代理被默认启用，需要在其他配置项中显式开启"
             }
         }
     },
@@ -203,43 +898,12 @@
                 "type": "list",
                 "default": [],
                 "hint": "命令前缀列表。触发格式是 命令前缀+触发词。"
-            }
-        }
-    },
-    "vertex_ai_anonymous_config": {
-        "description": "Vertex AI Anonymous配置项",
-        "type": "object",
-        "hint": "提供商配置中，除了接口规范和模型外，其他选项皆对Vertex AI Anonymous规范无效，请在此配置。",
-        "items": {
-            "recaptcha_base_api": {
-                "description": "Recaptcha Base API",
-                "type": "string",
-                "default": "https://www.google.com",
-                "hint": "考虑到网络环境或者IP频繁的情况，可以在这里配置反向代理"
             },
-            "vertex_ai_anonymous_base_api": {
-                "description": "Vertex AI Anonymous Base API",
-                "type": "string",
-                "default": "https://cloudconsole-pa.clients6.google.com",
-                "hint": "考虑到网络环境或者IP频繁的情况，可以在这里配置反向代理"
-            },
-            "system_prompt": {
-                "description": "系统提示词",
-                "type": "text",
-                "default": "",
-                "hint": "留空将不传递这个参数。"
-            },
-            "max_retry": {
-                "description": "最大重试次数",
-                "type": "int",
-                "default": 10,
-                "hint": "独立于常规接口的重试次数配置。"
-            },
-            "retry_delay": {
-                "description": "重试延迟",
-                "type": "float",
-                "default": 2,
-                "hint": "较大的重试延迟或许可以规避短时间内的集中失败的问题，单位：秒"
+            "provider_prefix": {
+                "description": "提供商前缀",
+                "type": "bool",
+                "default": false,
+                "hint": "启用后将校验命令前缀(若有)之后，预设提示词之前是否包含提供商名称。如果有则覆盖默认提供商和 --providers 参数。"
             }
         }
     },
@@ -251,26 +915,38 @@
             "skip_at_first": {
                 "description": "跳过第一次@机器人",
                 "type": "bool",
-                "default": true,
-                "hint": "通过@唤醒机器人时，跳过一次机器人的头像。"
+                "default": false,
+                "hint": "通过@唤醒机器人时，跳过一次机器人的头像收集。"
             },
             "skip_quote_first": {
                 "description": "跳过第一次@引用",
                 "type": "bool",
                 "default": true,
-                "hint": "如果@对象是被引用消息的发送者，跳过一次@对象的头像。"
+                "hint": "如果@对象是被引用消息的发送者，跳过一次@对象的头像收集。"
             },
             "skip_llm_at_first": {
-                "description": "LLM跳过第一次@机器人",
+                "description": "LLM工具跳过第一次@机器人",
                 "type": "bool",
                 "default": true,
-                "hint": "通过@机器人触发LLM函数调用工具，跳过一次机器人的头像。"
+                "hint": "通过@机器人触发LLM函数调用工具，跳过一次机器人的头像收集。"
+            },
+            "enable_at_avatar_note": {
+                "description": "添加At头像编号说明",
+                "type": "bool",
+                "default": true,
+                "hint": "启用后，当@对象头像被作为参考图加入时，会在最终生成前向提示词底部追加英文编号说明，帮助AI判断每个@对应最终输入图片列表中的第几张图。关闭后仍会添加头像参考图，但不追加这段说明。"
             },
             "enable_drawing_message": {
-                "description": "启用生成中提示消息",
+                "description": "命令调用是否发送生成中提示消息",
                 "type": "bool",
                 "default": true,
-                "hint": "是否在开始生成图片时向用户发送提示文字。"
+                "hint": "启用后将会在发送触发命令后，先发送一条生成中提示消息，再进行图片生成。"
+            },
+            "enable_llm_tool_drawing_message": {
+                "description": "LLM工具调用是否发送生成中提示消息",
+                "type": "bool",
+                "default": false,
+                "hint": "启用后将会在发送触发命令后，先发送一条生成中提示消息，再进行图片生成。"
             },
             "drawing_message": {
                 "description": "图片生成中提示消息",
@@ -278,24 +954,84 @@
                 "default": "🎨 在画了，请稍等一会...",
                 "hint": "开始生成图片时，发送给用户的提示文字。"
             },
+            "send_text_when_no_image": {
+                "description": "无图片时发送文本响应",
+                "type": "bool",
+                "default": false,
+                "hint": "开启后，如果响应未包含图片但包含文本内容，将把文本内容作为结果发送；否则返回「响应中未包含图片数据」。"
+            },
             "group_cooldown": {
                 "description": "群组冷却时间",
                 "type": "int",
                 "default": 0,
                 "hint": "控制每个群组使用画图工具的冷却时间(秒)，0为不限制。在成功发送图片后开始计算冷却。"
+            },
+            "command_use_background_task": {
+                "description": "命令调用时使用后台任务执行绘图",
+                "type": "bool",
+                "default": true,
+                "hint": "开启后绘图会作为后台任务执行并在完成后回发结果；关闭后会在当前消息处理流程中等待绘图完成。仅命令调用生效。"
+            },
+            "gather_timeout": {
+                "description": "收集模式超时时间",
+                "type": "int",
+                "default": 120,
+                "hint": "发送消息后等待用户发送图片或触发结束命令的最大时间（秒），每次收集后重置剩余时间。"
             }
         }
     },
-    "llm_tool_settings": {
+    "llm_tools": {
         "description": "LLM函数调用工具配置",
         "type": "object",
         "hint": "",
         "items": {
-            "llm_tool_enabled": {
-                "description": "启用函数调用工具",
+            "enable_preset_tool": {
+                "description": "启用预设查询工具",
                 "type": "bool",
                 "default": true,
-                "hint": "通过LLM对话生成图片，建议在AstrBot面板的配置文件中调整「工具调用超时时间」，以适应图片生成需要"
+                "hint": "允许 LLM 查询可用预设和预设提示词内容"
+            },
+            "enable_image_generation_tool": {
+                "description": "启用图片生成工具",
+                "type": "bool",
+                "default": true,
+                "hint": "允许 LLM 根据文本、聊天图片或头像参考生成图片"
+            },
+            "llm_tool_preset_name": {
+                "description": "LLM工具调用预设参数",
+                "type": "string",
+                "default": "llm_default",
+                "hint": "填写预设提示词配置中的触发词。该预设按字段覆盖插件默认参数；LLM 本次调用指定的预设再按字段覆盖此预设，未被后一级指定的参数会继续保留。留空表示不使用。"
+            },
+            "llm_tool_use_background_task": {
+                "description": "Tools调用使用后台任务",
+                "type": "bool",
+                "default": true,
+                "hint": "开启后由 BigBanana 在插件内部执行后台任务。配置上游回调时把结果交给回调；开启直接发送时在完成后主动发送图片。两者都未配置时会自动改为前台执行，以免图片结果丢失。"
+            },
+            "llm_tool_direct_send_result": {
+                "description": "LLM工具直接发送图片结果",
+                "type": "bool",
+                "default": false,
+                "hint": "关闭时将图片结果返回给 AI 或上游回调，由其决定发送、重新生成或执行其他操作；开启时由插件直接发送图片，再将文字完成状态返回给 AI 或上游回调。"
+            },
+            "llm_tool_restrict_private_network": {
+                "description": "限制LLM工具访问内网图片URL",
+                "type": "bool",
+                "default": true,
+                "hint": "开启时拒绝解析到内网、回环或保留地址的远程图片 URL。使用代理软件 Fake-IP 模式且公网图片被误判时可关闭；关闭后请自行承担 LLM 访问内网 URL 的安全风险。"
+            },
+            "background_callback_plugin": {
+                "description": "后台回调插件",
+                "type": "string",
+                "default": "",
+                "hint": "后台绘图完成后接收结果的上游插件名称。与后台回调方法同时填写才生效。回调调用失败会自动回退到主动发送。"
+            },
+            "background_callback_method": {
+                "description": "后台回调方法",
+                "type": "string",
+                "default": "",
+                "hint": "上游插件中的方法名，将以 event、result、params、unified_msg_origin 四个关键字参数调用。result 始终为 MessageChain：未开启直接发送时包含图片或失败文本；开启后插件会先发送图片，消息链包含文字完成状态。上游插件可自行将消息链交给 AI 处理。unified_msg_origin 可用于定位原会话。可定义为同步函数、协程或异步生成器。"
             }
         }
     },
@@ -317,11 +1053,17 @@
         "type": "object",
         "hint": "启用后，在对话大模型调用画图工具生成图片时，会将传给工具的简短描述先提交给副脑进行扩写优化，再交给画图供应商生成图片。",
         "items": {
-            "enabled": {
-                "description": "启用副脑优化",
+            "cmd_enabled": {
+                "description": "命令调用默认启用副脑",
                 "type": "bool",
                 "default": false,
-                "hint": "是否启用副脑提示词优化"
+                "hint": "命令调用是否默认启用副脑，关闭后只有提示词显式使用 --sub_brain 参数才能启用副脑优化"
+            },
+            "tool_enabled": {
+                "description": "工具调用默认启用副脑",
+                "type": "bool",
+                "default": false,
+                "hint": "工具调用是否默认启用副脑，关闭后只有提示词显式使用 --sub_brain 参数才能启用副脑优化"
             },
             "provider_id": {
                 "description": "副脑模型供应商 (LLM Provider)",

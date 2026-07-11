@@ -15,7 +15,7 @@
     <div class="sub">配置图片生成提供商、参数、白名单及命令前缀</div>
   </header>
 
-  <!-- Navigation Tabs sticky at top -->
+  <!-- 顶部固定标签导航 -->
   <nav class="tabs-nav">
     <button class="tab-btn active" onclick="switchTab('presets')">预设提示词</button>
     <button class="tab-btn" onclick="switchTab('draw')">画图参数</button>
@@ -28,7 +28,7 @@
     <button class="tab-btn" onclick="switchTab('persona_replace')">人设替换</button>
   </nav>
 
-  <!-- 1. Preset Prompts Panel -->
+  <!-- 1. 预设提示词面板 -->
   <div class="tab-panel active" id="tab-presets">
     <div class="config-card">
       <h2 class="section-title">预设提示词规则</h2>
@@ -40,7 +40,7 @@
     </div>
   </div>
 
-  <!-- 2. Draw Parameter Panel -->
+  <!-- 2. 绘图参数面板 -->
   <div class="tab-panel" id="tab-draw">
     <div class="config-card">
       <h2 class="section-title">绘图供应商优先级</h2>
@@ -53,29 +53,16 @@
 
     <div class="config-card">
       <h2 class="section-title">画图选项</h2>
-      <div class="form-group checkbox-row">
-        <label for="stream">启用流式响应</label>
-        <label class="switch">
-          <input type="checkbox" id="stream">
-          <span class="switch-slider"></span>
-        </label>
-      </div>
-
       <div class="form-group">
         <label for="pc_min_images">最小输入图片数量</label>
-        <div class="slider-container">
-          <input type="range" class="slider-input" id="pc_min_images" min="0" max="10" step="1" oninput="updateSliderValue(this)">
-          <span class="slider-value" id="val-pc_min_images">0</span>
-        </div>
+        <input type="number" class="text-input" id="pc_min_images" min="0" step="1">
         <div class="hint-text">如果输入图片不够，会自动添加At对象或发送者头像。</div>
       </div>
 
       <div class="form-group">
         <label for="pc_max_images">最大输入图片数量</label>
-        <div class="slider-container">
-          <input type="range" class="slider-input" id="pc_max_images" min="1" max="15" step="1" oninput="updateSliderValue(this)">
-          <span class="slider-value" id="val-pc_max_images">0</span>
-        </div>
+        <input type="number" class="text-input" id="pc_max_images" min="0" step="1">
+        <div class="hint-text">插件不设置全局上限，实际可用数量由具体提供商决定。</div>
       </div>
 
       <div class="form-group">
@@ -136,10 +123,19 @@
           <span class="switch-slider"></span>
         </label>
       </div>
+
+      <div class="form-group checkbox-row">
+        <label for="pc_url">默认仅返回图片 URL</label>
+        <label class="switch">
+          <input type="checkbox" id="pc_url">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="hint-text">提示词中的 --url true/false 可覆盖此默认值。</div>
+      </div>
     </div>
   </div>
 
-  <!-- 3. General Config Panel -->
+  <!-- 3. 常规配置面板 -->
   <div class="tab-panel" id="tab-general">
     <div class="config-card">
       <h2 class="section-title">常规配置</h2>
@@ -150,14 +146,6 @@
           <span class="switch-slider"></span>
         </label>
         <div class="hint-text">如果提示词没有 {{user_text}} 占位符，会自动在末尾追加用户输入。</div>
-      </div>
-
-      <div class="form-group checkbox-row">
-        <label for="cc_text_response">启用文本响应</label>
-        <label class="switch">
-          <input type="checkbox" id="cc_text_response">
-          <span class="switch-slider"></span>
-        </label>
       </div>
 
       <div class="form-group checkbox-row">
@@ -188,7 +176,7 @@
     </div>
   </div>
 
-  <!-- 4. Trigger & Preference Panel -->
+  <!-- 4. 触发与偏好面板 -->
   <div class="tab-panel" id="tab-trigger">
     <div class="config-card">
       <h2 class="section-title">前缀与触发方式</h2>
@@ -200,6 +188,14 @@
         </label>
       </div>
       
+      <div class="form-group checkbox-row">
+        <label for="pfx_provider_prefix">启用提供商前缀</label>
+        <label class="switch">
+          <input type="checkbox" id="pfx_provider_prefix">
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
       <div class="list-container" id="prefix-list"></div>
       <button class="add-btn" onclick="addPrefixItem()">＋ 添加命令前缀</button>
     </div>
@@ -238,6 +234,15 @@
         </label>
       </div>
 
+      <div class="form-group checkbox-row">
+        <label for="pref_send_text_when_no_image">无图时发送文本响应</label>
+        <label class="switch">
+          <input type="checkbox" id="pref_send_text_when_no_image">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="hint-text">开启后，如果响应未包含图片但包含文本内容，将把文本内容作为结果发送。</div>
+      </div>
+
       <div class="form-group">
         <label for="pref_drawing_message">生成中提示消息</label>
         <input type="text" class="text-input" id="pref_drawing_message" placeholder="🎨 在画了，请稍等一会...">
@@ -250,6 +255,15 @@
           <span class="slider-value" id="val-pref_group_cooldown">0s</span>
         </div>
         <div class="hint-text">控制每个群组使用画画命令或工具的冷却间隔时间，0 为不限制。</div>
+      </div>
+
+      <div class="form-group checkbox-row">
+        <label for="pref_use_background_task">使用后台任务执行绘图</label>
+        <label class="switch">
+          <input type="checkbox" id="pref_use_background_task">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="hint-text">关闭后会等待绘图完成再回发结果。</div>
       </div>
     </div>
 
@@ -264,10 +278,19 @@
           <span class="switch-slider"></span>
         </label>
       </div>
+
+      <div class="form-group checkbox-row">
+        <label for="tools_llm_tool_use_background_task">Tools 调用使用后台任务</label>
+        <label class="switch">
+          <input type="checkbox" id="tools_llm_tool_use_background_task">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="hint-text">关闭后函数调用会等待绘图完成再返回。</div>
+      </div>
     </div>
   </div>
 
-  <!-- 5. Whitelists Panel -->
+  <!-- 5. 白名单面板 -->
   <div class="tab-panel" id="tab-whitelist">
     <div class="config-card">
       <h2 class="section-title">白名单生效范围限制</h2>
@@ -318,7 +341,7 @@
     </div>
   </div>
 
-  <!-- 6. Image Hosting Panel -->
+  <!-- 6. 图床面板 -->
   <div class="tab-panel" id="tab-hosting">
     <div class="config-card">
       <h2 class="section-title">R2/Cloudflare 图床上传设置</h2>
@@ -352,7 +375,7 @@
     </div>
   </div>
 
-  <!-- Sub Brain Panel -->
+  <!-- 副脑面板 -->
   <div class="tab-panel" id="tab-sub_brain">
     <div class="config-card">
       <h2 class="section-title">副脑提示词优化设置</h2>
@@ -382,36 +405,8 @@
     </div>
   </div>
 
-  <!-- 7. Advanced & Vertex AI Panel -->
+  <!-- 7. 高级与其它面板 -->
   <div class="tab-panel" id="tab-advanced">
-    <div class="config-card">
-      <h2 class="section-title">Vertex AI Anonymous 规范配置</h2>
-      <div class="form-group">
-        <label for="va_recaptcha_base_api">Recaptcha Base API</label>
-        <input type="text" class="text-input" id="va_recaptcha_base_api" placeholder="https://www.google.com">
-      </div>
-
-      <div class="form-group">
-        <label for="va_vertex_ai_anonymous_base_api">Vertex AI Anonymous Base API</label>
-        <input type="text" class="text-input" id="va_vertex_ai_anonymous_base_api" placeholder="https://cloudconsole-pa.clients6.google.com">
-      </div>
-
-      <div class="form-group">
-        <label for="va_system_prompt">系统提示词 (System Prompt)</label>
-        <textarea class="textarea-input" id="va_system_prompt" placeholder="留空则不传递该系统提示词"></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="va_max_retry">最大重试次数</label>
-        <input type="number" class="text-input" id="va_max_retry" min="1" max="25" placeholder="10">
-      </div>
-
-      <div class="form-group">
-        <label for="va_retry_delay">重试延迟时长 (秒)</label>
-        <input type="number" class="text-input" id="va_retry_delay" min="0.1" max="30" step="0.1" placeholder="2">
-      </div>
-    </div>
-
     <div class="config-card">
       <h2 class="section-title">参数别名映射 (Params Alias Map)</h2>
       <div class="hint-text" style="margin-bottom: 16px;">
@@ -422,7 +417,7 @@
     </div>
   </div>
 
-  <!-- 8. Persona Replace Panel -->
+  <!-- 8. 人设替换面板 -->
   <div class="tab-panel" id="tab-persona_replace">
     <div class="config-card">
       <h2 class="section-title">人设头像替换</h2>
@@ -435,15 +430,15 @@
   </div>
 </div>
 
-<!-- Footer save/discard bar -->
+<!-- 底部保存与放弃操作栏 -->
 <footer class="footer-bar">
   <button class="btn btn-secondary" onclick="loadData()">🔄 放弃更改</button>
-  <button class="btn btn-primary" id="btnSave" onclick="saveAll()">💾 保存并生效</button>
+  <button class="btn btn-primary" id="btnSave" onclick="saveAll()">💾 保存配置</button>
 </footer>
 
 <div class="toast" id="toast"></div>
 
-<!-- Load scripts sequentially -->
+<!-- 按顺序加载脚本 -->
 <script src="js/common.js"></script>
 <script src="js/config.js"></script>
 <script src="js/init.js"></script>

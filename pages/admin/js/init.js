@@ -1,8 +1,8 @@
-// ===== Initialization: Event Listeners Binding and First Page Load =====
-// This script relies on common.js and config.js. It must be loaded last.
+// ===== 初始化事件监听和首次加载 =====
+// 依赖 common.js 和 config.js，需要最后加载。
 
 document.addEventListener('DOMContentLoaded', function () {
-  // Global Esc: Close overlay modals if any exists in the page structure
+  // 全局 Esc：关闭页面中已打开的弹窗。
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
       var overlay = document.getElementById('ccConfirmModal');
@@ -10,6 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // First page load: Fetch configuration data and active providers
+  // 首次加载配置数据和可用提供商。
   loadData();
 });

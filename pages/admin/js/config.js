@@ -1,6 +1,6 @@
-// ===== Configuration Form Loading, Rendering, and Saving Logic =====
+// ===== 配置表单加载、渲染和保存逻辑 =====
 
-// Helper to add a dynamic preset prompt card
+// 渲染一个预设提示词配置项。
 function addPromptItem(data) {
   data = data || { trigger: '', content: '' };
   var container = document.getElementById('prompts-list');
@@ -22,7 +22,7 @@ function addPromptItem(data) {
   container.appendChild(card);
 }
 
-// Helper to add a dynamic provider priority card
+// 渲染一个模型提供商优先级配置项。
 function addProviderItem(selectedProvider) {
   selectedProvider = selectedProvider || '';
   var container = document.getElementById('providers-list');
@@ -47,7 +47,7 @@ function addProviderItem(selectedProvider) {
   container.appendChild(card);
 }
 
-// Helper to add a dynamic parameter alias mapping card
+// 渲染一个参数别名映射配置项。
 function addAliasItem(data) {
   data = data || { alias: '', target: '' };
   var container = document.getElementById('alias-list');
@@ -69,7 +69,7 @@ function addAliasItem(data) {
   container.appendChild(card);
 }
 
-// Helper to add a dynamic persona substitution rule card
+// 渲染一个头像替换规则配置卡片。
 function addPersonaReplaceItem(targetId, imgList) {
   targetId = targetId || '';
   imgList = imgList || [];
@@ -77,7 +77,7 @@ function addPersonaReplaceItem(targetId, imgList) {
   var card = document.createElement('div');
   card.className = 'list-item-card persona-replace-card';
   
-  // Generate a unique ID for this card to associate file inputs
+  // 生成唯一 ID，用于关联隐藏的文件输入框。
   var cardId = 'persona_card_' + Math.random().toString(36).substr(2, 9);
   card.id = cardId;
   
@@ -91,7 +91,7 @@ function addPersonaReplaceItem(targetId, imgList) {
       <div class="form-group">
         <label>参考图片列表</label>
         <div class="images-sub-list" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 12px;">
-          <!-- Existing images go here -->
+          <!-- 已有图片会渲染到这里 -->
         </div>
         <div style="margin-top: 12px; display: flex; gap: 10px;">
           <button class="btn btn-secondary btn-sm" onclick="promptPersonaImageUrl('${cardId}')" type="button">＋ 添加图片 URL</button>
@@ -103,13 +103,13 @@ function addPersonaReplaceItem(targetId, imgList) {
   `;
   container.appendChild(card);
   
-  // Populate existing images
+  // 回填已有图片。
   imgList.forEach(function(url) {
     addPersonaImageRow(cardId, url);
   });
 }
 
-// Prompt the user for an image URL and add it
+// 通过输入框添加头像参考图 URL。
 function promptPersonaImageUrl(cardId) {
   var url = prompt("请输入图片 URL:");
   if (url && url.trim()) {
@@ -117,7 +117,7 @@ function promptPersonaImageUrl(cardId) {
   }
 }
 
-// Helper to add a row to the image references inside a persona rule card
+// 在头像替换规则中添加图片预览行。
 function addPersonaImageRow(cardId, url, overrideDisplayUrl) {
   if (!url) return;
   var card = document.getElementById(cardId);
@@ -148,7 +148,7 @@ function addPersonaImageRow(cardId, url, overrideDisplayUrl) {
   `;
   list.appendChild(row);
 
-  // If local file and no override URL is provided, fetch it asynchronously via API
+  // 本地文件没有预览地址时，通过 API 异步读取。
   if (!isUrl && !overrideDisplayUrl) {
     var SDK = window.AstrBotPluginPage;
     if (SDK) {
@@ -161,25 +161,26 @@ function addPersonaImageRow(cardId, url, overrideDisplayUrl) {
           }
         })
         .catch(function (err) {
-          console.error('Failed to load local image preview:', err);
+          console.error('加载本地图片预览失败:', err);
         });
     }
   }
 }
 
-// Trigger input click for file upload
+// 触发隐藏文件选择框以上传本地图片。
 function triggerPersonaImageUpload(cardId) {
   var fileInput = document.getElementById('file_' + cardId);
   if (fileInput) fileInput.click();
 }
 
+// 读取并上传本地头像参考图。
 function handlePersonaImageUpload(fileInput, cardId) {
   var file = fileInput.files[0];
   if (!file) return;
 
   var SDK = window.AstrBotPluginPage;
   if (!SDK) {
-    showToast('SDK not available');
+    showToast('SDK 不可用');
     return;
   }
 
@@ -210,11 +211,11 @@ function handlePersonaImageUpload(fileInput, cardId) {
   };
   reader.readAsDataURL(file);
 
-  // Clear input
+  // 清空文件输入框。
   fileInput.value = '';
 }
 
-// Helper to add a dynamic whitelist item card (for users or groups)
+// 渲染用户或群组白名单配置项。
 function addWhitelistItem(containerId, value, placeholder) {
   value = value || '';
   var container = document.getElementById(containerId);
@@ -232,7 +233,7 @@ function addWhitelistItem(containerId, value, placeholder) {
   container.appendChild(card);
 }
 
-// Helper to add a prefix list item card
+// 渲染命令前缀配置项。
 function addPrefixItem(value) {
   value = value || '';
   var container = document.getElementById('prefix-list');
@@ -250,7 +251,7 @@ function addPrefixItem(value) {
   container.appendChild(card);
 }
 
-// Parse prompt settings from raw string representation
+// 拆分配置中的触发词和提示词正文。
 function parsePromptString(str) {
   str = str.trim();
   var spaceIdx = str.indexOf(' ');
@@ -263,7 +264,7 @@ function parsePromptString(str) {
   };
 }
 
-// Load data from the backend APIs
+// 从后端加载配置并回填管理表单。
 function loadData() {
   document.getElementById('btnSave').disabled = true;
   var SDK = window.AstrBotPluginPage;
@@ -278,7 +279,7 @@ function loadData() {
     providers = parseResponse(results[1]) || [];
     var substitutions = parseResponse(results[2]) || {};
 
-    // Populate sub_brain provider options dynamically
+    // 动态填充副脑提供商选项。
     var sbSelect = document.getElementById('sb_provider_id');
     if (sbSelect) {
       sbSelect.innerHTML = '<option value="">当前会话默认供应商</option>';
@@ -290,32 +291,32 @@ function loadData() {
       });
     }
 
-    // Populate providers list selects if any exists
-    // Bind base checkboxes and inputs
-    document.getElementById('stream').checked = !!config.stream;
-    
-    // Bind prompt_config nested object fields
-    var pc = config.prompt_config || {};
+    // 如有提供商下拉框则填充选项。
+    // 绑定基础复选框和输入框。
+    // 绑定图片参数配置。
+    var pc = config.params_config || {};
+    var gic = config.gemini_image_config || {};
+    var oic = config.openai_image_config || {};
     ['min_images', 'max_images'].forEach(function (k) {
       if (pc[k] !== undefined) document.getElementById('pc_' + k).value = pc[k];
     });
-    document.getElementById('pc_aspect_ratio').value = pc.aspect_ratio || 'default';
-    document.getElementById('pc_image_size').value = pc.image_size || '1K';
-    document.getElementById('pc_google_search').checked = pc.google_search !== false;
+    document.getElementById('pc_aspect_ratio').value = gic.aspect_ratio || 'default';
+    document.getElementById('pc_image_size').value = gic.image_size || '1K';
+    document.getElementById('pc_google_search').checked = gic.google_search !== false;
     document.getElementById('pc_refer_images').value = pc.refer_images || '';
     document.getElementById('pc_gather_mode').checked = !!pc.gather_mode;
-    document.getElementById('pc_moderation').value = pc.moderation || 'auto';
+    document.getElementById('pc_url').checked = !!pc.url;
+    document.getElementById('pc_moderation').value = oic.moderation || 'auto';
 
-    // Bind common_config nested object fields
+    // 绑定 common_config 嵌套字段。
     var cc = config.common_config || {};
     document.getElementById('cc_preset_append').checked = cc.preset_append !== false;
-    document.getElementById('cc_text_response').checked = !!cc.text_response;
     document.getElementById('cc_smart_retry').checked = cc.smart_retry !== false;
     if (cc.max_retry !== undefined) document.getElementById('cc_max_retry').value = cc.max_retry;
     if (cc.timeout !== undefined) document.getElementById('cc_timeout').value = cc.timeout;
     document.getElementById('cc_proxy').value = cc.proxy || '';
 
-    // Bind image_hosting nested object fields
+    // 绑定 image_hosting 嵌套字段。
     var ih = config.image_hosting || {};
     document.getElementById('ih_enabled').checked = !!ih.enabled;
     document.getElementById('ih_upload_url').value = ih.upload_url || '';
@@ -323,62 +324,58 @@ function loadData() {
     document.getElementById('ih_auth_token').value = ih.auth_token || '';
     document.getElementById('ih_path_prefix').value = ih.path_prefix || 'big-banana';
 
-    // Bind sub_brain nested object fields
+    // 绑定 sub_brain 嵌套字段。
     var sb = config.sub_brain || {};
-    document.getElementById('sb_enabled').checked = !!sb.enabled;
+    document.getElementById('sb_enabled').checked = !!(sb.cmd_enabled || sb.tool_enabled);
     document.getElementById('sb_provider_id').value = sb.provider_id || '';
     document.getElementById('sb_system_prompt').value = sb.system_prompt || '你是一个专业的视觉艺术大师与画图提示词优化助手。你的任务是将用户口语化的简短提示词，翻译并优化为适合 AI 生图（如 DALL-E 3、Stable Diffusion、Midjourney）的高质量英文提示词。\n\n请遵循以下优化规范丰富提示词：\n- Subject (主体): 补充动作、表情、衣着及材质等细节。\n- Style (艺术风格): 明确艺术风格（如 cyberpunk, anime illustration, photorealistic 等）。\n- Detail & Environment (环境): 补充背景及环境细节。\n- Lighting & Color (光影色彩): 设定光影色彩（如 cinematic lighting, golden hour 等）。\n- Quality Tags (画质标签): 加入画质修饰词（如 masterpiece, highly detailed, sharp focus 等）。\n\n特别要求：\n- 如果原始提示词中包含对参考图或头像编号的引用（如 "image 1", "image 2", "图1", "图2", "the character in image 1" 等），在翻译和优化时必须**完整且原样保留**这些引用标识（如 "the character in image 1", "image 1"），绝对不能用具体的角色名字替换它们或将它们删除。\n\n注意：直接输出优化后的最终英文提示词文本，绝对不要包含任何解释、问候或额外的 Markdown 格式（如包裹代码块的 ``` 或 "Prompt:" 等前缀）。';
 
-    // Bind prefix_config nested object fields
+    // 绑定 prefix_config 嵌套字段。
     var pfx = config.prefix_config || {};
     document.getElementById('pfx_coexist_enabled').checked = !!pfx.coexist_enabled;
+    document.getElementById('pfx_provider_prefix').checked = !!pfx.provider_prefix;
 
-    // Bind vertex_ai_anonymous_config nested object fields
-    var va = config.vertex_ai_anonymous_config || {};
-    document.getElementById('va_recaptcha_base_api').value = va.recaptcha_base_api || 'https://www.google.com';
-    document.getElementById('va_vertex_ai_anonymous_base_api').value = va.vertex_ai_anonymous_base_api || 'https://cloudconsole-pa.clients6.google.com';
-    document.getElementById('va_system_prompt').value = va.system_prompt || '';
-    if (va.max_retry !== undefined) document.getElementById('va_max_retry').value = va.max_retry;
-    if (va.retry_delay !== undefined) document.getElementById('va_retry_delay').value = va.retry_delay;
-
-    // Bind preference_config nested object fields
+    // 绑定 preference_config 嵌套字段。
     var pref = config.preference_config || {};
     document.getElementById('pref_skip_at_first').checked = pref.skip_at_first !== false;
     document.getElementById('pref_skip_quote_first').checked = pref.skip_quote_first !== false;
     document.getElementById('pref_skip_llm_at_first').checked = pref.skip_llm_at_first !== false;
     document.getElementById('pref_enable_drawing_message').checked = pref.enable_drawing_message !== false;
+    document.getElementById('pref_send_text_when_no_image').checked = !!pref.send_text_when_no_image;
     document.getElementById('pref_drawing_message').value = pref.drawing_message || '🎨 在画了，请稍等一会...';
     document.getElementById('pref_group_cooldown').value = pref.group_cooldown || 0;
+    document.getElementById('pref_use_background_task').checked = pref.command_use_background_task !== false;
 
-    // Bind llm_tool_settings nested object fields
-    var tools = config.llm_tool_settings || {};
-    document.getElementById('tools_llm_tool_enabled').checked = tools.llm_tool_enabled !== false;
+    // 绑定 LLM 工具配置。
+    var tools = config.llm_tools || {};
+    document.getElementById('tools_llm_tool_enabled').checked = tools.enable_image_generation_tool !== false;
+    document.getElementById('tools_llm_tool_use_background_task').checked = tools.llm_tool_use_background_task !== false;
 
-    // Bind save_images nested object fields
+    // 绑定 save_images 嵌套字段。
     var saveImg = config.save_images || {};
     document.getElementById('save_local_save').checked = !!saveImg.local_save;
 
-    // Bind whitelist_config nested object fields
+    // 绑定 whitelist_config 嵌套字段。
     var wl = config.whitelist_config || {};
     document.getElementById('wl_enabled').checked = !!wl.enabled;
     document.getElementById('wl_user_enabled').checked = !!wl.user_enabled;
     document.getElementById('wl_only_for_commands').checked = !!wl.only_for_commands;
 
-    // Render preset prompts list
+    // 渲染预设提示词列表。
     var promptsList = document.getElementById('prompts-list');
     promptsList.innerHTML = '';
     (config.prompt || []).forEach(function (item) {
       addPromptItem(parsePromptString(item));
     });
 
-    // Render provider priority list
+    // 渲染提供商优先级列表。
     var providersList = document.getElementById('providers-list');
     providersList.innerHTML = '';
     (config.image_generation_providers || []).forEach(function (prov) {
       addProviderItem(prov);
     });
 
-    // Render parameter aliases list
+    // 渲染参数别名列表。
     var aliasList = document.getElementById('alias-list');
     aliasList.innerHTML = '';
     (config.params_alias_map || []).forEach(function (mapping) {
@@ -386,7 +383,7 @@ function loadData() {
       addAliasItem({ alias: parts[0] || '', target: parts[1] || '' });
     });
 
-    // Render whitelists lists
+    // 渲染白名单列表。
     var groupWhitelistContainer = document.getElementById('group-whitelist-list');
     groupWhitelistContainer.innerHTML = '';
     (wl.whitelist || []).forEach(function (val) {
@@ -399,14 +396,14 @@ function loadData() {
       addWhitelistItem('user-whitelist-list', val, '用户 QQ 号');
     });
 
-    // Render prefix lists
+    // 渲染命令前缀列表。
     var prefixListContainer = document.getElementById('prefix-list');
     prefixListContainer.innerHTML = '';
     (pfx.prefix_list || []).forEach(function (val) {
       addPrefixItem(val);
     });
 
-    // Render avatar substitutions list
+    // 渲染头像替换列表。
     var personaReplaceList = document.getElementById('persona-replace-list');
     personaReplaceList.innerHTML = '';
     for (var targetId in substitutions) {
@@ -415,7 +412,7 @@ function loadData() {
       }
     }
 
-    // Initialize all custom sliders UI display
+    // 初始化所有自定义滑块显示。
     initSliders();
     document.getElementById('btnSave').disabled = false;
     showToast('配置数据加载成功');
@@ -424,7 +421,7 @@ function loadData() {
   });
 }
 
-// Gather all inputs and save configuration
+// 收集表单内容并提交保存。
 function saveAll() {
   var btnSave = document.getElementById('btnSave');
   btnSave.disabled = true;
@@ -436,33 +433,43 @@ function saveAll() {
   for (var key in config) {
     updatedConfig[key] = config[key];
   }
+  var minImages = Number(document.getElementById('pc_min_images').value);
+  var maxImages = Number(document.getElementById('pc_max_images').value);
+  if (!Number.isInteger(minImages) || minImages < 0 || !Number.isInteger(maxImages) || maxImages < 0) {
+    showToast('最小和最大输入图片数量必须是非负整数');
+    btnSave.disabled = false;
+    btnSave.textContent = '💾 保存配置';
+    return;
+  }
 
-  // Update root values
-  updatedConfig.stream = document.getElementById('stream').checked;
-
-  // Build prompt_config object
-  updatedConfig.prompt_config = {
-    min_images: parseInt(document.getElementById('pc_min_images').value),
-    max_images: parseInt(document.getElementById('pc_max_images').value),
-    aspect_ratio: document.getElementById('pc_aspect_ratio').value,
-    image_size: document.getElementById('pc_image_size').value,
-    google_search: document.getElementById('pc_google_search').checked,
+  // 构造 params_config 配置。
+  updatedConfig.params_config = Object.assign({}, config.params_config || {}, {
+    min_images: minImages,
+    max_images: maxImages,
     refer_images: document.getElementById('pc_refer_images').value.trim(),
     gather_mode: document.getElementById('pc_gather_mode').checked,
-    moderation: document.getElementById('pc_moderation').value
-  };
+    url: document.getElementById('pc_url').checked
+  });
 
-  // Build common_config object
+  // 构造 Gemini/OpenAI 图片参数配置，并保留页面未展示的字段。
+  updatedConfig.gemini_image_config = Object.assign({}, config.gemini_image_config || {}, {
+    aspect_ratio: document.getElementById('pc_aspect_ratio').value,
+    image_size: document.getElementById('pc_image_size').value,
+    google_search: document.getElementById('pc_google_search').checked
+  });
+  updatedConfig.openai_image_config = Object.assign({}, config.openai_image_config || {}, {
+    moderation: document.getElementById('pc_moderation').value
+  });
+  // 构造 common_config 配置。
   updatedConfig.common_config = {
     preset_append: document.getElementById('cc_preset_append').checked,
-    text_response: document.getElementById('cc_text_response').checked,
     smart_retry: document.getElementById('cc_smart_retry').checked,
     max_retry: parseInt(document.getElementById('cc_max_retry').value),
     timeout: parseFloat(document.getElementById('cc_timeout').value),
     proxy: document.getElementById('cc_proxy').value.trim()
   };
 
-  // Build image_hosting object
+  // 构造 image_hosting 配置。
   updatedConfig.image_hosting = {
     enabled: document.getElementById('ih_enabled').checked,
     upload_url: document.getElementById('ih_upload_url').value.trim(),
@@ -471,14 +478,16 @@ function saveAll() {
     path_prefix: document.getElementById('ih_path_prefix').value.trim()
   };
 
-  // Build sub_brain object
-  updatedConfig.sub_brain = {
-    enabled: document.getElementById('sb_enabled').checked,
+  // 构造 sub_brain 配置。
+  var subBrainEnabled = document.getElementById('sb_enabled').checked;
+  updatedConfig.sub_brain = Object.assign({}, config.sub_brain || {}, {
+    cmd_enabled: subBrainEnabled,
+    tool_enabled: subBrainEnabled,
     provider_id: document.getElementById('sb_provider_id').value || '',
     system_prompt: document.getElementById('sb_system_prompt').value.trim()
-  };
+  });
 
-  // Build prefix_config object
+  // 构造 prefix_config 配置。
   var prefixes = [];
   document.querySelectorAll('#prefix-list .prefix-value').forEach(function (input) {
     var val = input.value.trim();
@@ -486,39 +495,35 @@ function saveAll() {
   });
   updatedConfig.prefix_config = {
     coexist_enabled: document.getElementById('pfx_coexist_enabled').checked,
-    prefix_list: prefixes
+    prefix_list: prefixes,
+    provider_prefix: document.getElementById('pfx_provider_prefix').checked
   };
-
-  // Build vertex_ai_anonymous_config object
-  updatedConfig.vertex_ai_anonymous_config = {
-    recaptcha_base_api: document.getElementById('va_recaptcha_base_api').value.trim(),
-    vertex_ai_anonymous_base_api: document.getElementById('va_vertex_ai_anonymous_base_api').value.trim(),
-    system_prompt: document.getElementById('va_system_prompt').value.trim(),
-    max_retry: parseInt(document.getElementById('va_max_retry').value),
-    retry_delay: parseFloat(document.getElementById('va_retry_delay').value)
-  };
-
-  // Build preference_config object
-  updatedConfig.preference_config = {
+  // 构造 preference_config 配置。
+  updatedConfig.preference_config = Object.assign({}, config.preference_config || {}, {
     skip_at_first: document.getElementById('pref_skip_at_first').checked,
     skip_quote_first: document.getElementById('pref_skip_quote_first').checked,
     skip_llm_at_first: document.getElementById('pref_skip_llm_at_first').checked,
     enable_drawing_message: document.getElementById('pref_enable_drawing_message').checked,
+    send_text_when_no_image: document.getElementById('pref_send_text_when_no_image').checked,
     drawing_message: document.getElementById('pref_drawing_message').value.trim(),
-    group_cooldown: parseInt(document.getElementById('pref_group_cooldown').value) || 0
-  };
+    group_cooldown: parseInt(document.getElementById('pref_group_cooldown').value) || 0,
+    command_use_background_task: document.getElementById('pref_use_background_task').checked
+  });
 
-  // Build llm_tool_settings object
-  updatedConfig.llm_tool_settings = {
-    llm_tool_enabled: document.getElementById('tools_llm_tool_enabled').checked
-  };
+  // 构造当前 llm_tools 配置，同时保留页面未展示的高级字段。
+  var llmToolEnabled = document.getElementById('tools_llm_tool_enabled').checked;
+  updatedConfig.llm_tools = Object.assign({}, config.llm_tools || {}, {
+    enable_preset_tool: llmToolEnabled,
+    enable_image_generation_tool: llmToolEnabled,
+    llm_tool_use_background_task: document.getElementById('tools_llm_tool_use_background_task').checked
+  });
 
-  // Build save_images object
+  // 构造 save_images 配置。
   updatedConfig.save_images = {
     local_save: document.getElementById('save_local_save').checked
   };
 
-  // Build whitelist_config object
+  // 构造 whitelist_config 配置。
   var groupWl = [];
   document.querySelectorAll('#group-whitelist-list .whitelist-value').forEach(function (input) {
     var val = input.value.trim();
@@ -537,18 +542,27 @@ function saveAll() {
     only_for_commands: document.getElementById('wl_only_for_commands').checked
   };
 
-  // Gather preset prompts list
+  // 收集预设提示词列表。
   var promptList = [];
+  var emptyPromptTrigger = '';
   document.querySelectorAll('#prompts-list .list-item-card').forEach(function (card) {
     var trigger = card.querySelector('.prompt-trigger').value.trim();
     var content = card.querySelector('.prompt-content').value.trim();
-    if (trigger) {
+    if (trigger && !content) {
+      emptyPromptTrigger = trigger;
+    } else if (trigger) {
       promptList.push(trigger + ' ' + content);
     }
   });
+  if (emptyPromptTrigger) {
+    showToast('预设「' + emptyPromptTrigger + '」的提示词正文不能为空');
+    btnSave.disabled = false;
+    btnSave.textContent = '💾 保存配置';
+    return;
+  }
   updatedConfig.prompt = promptList;
 
-  // Gather provider priority list
+  // 收集提供商优先级列表。
   var providersList = [];
   document.querySelectorAll('#providers-list .provider-select').forEach(function (select) {
     var val = select.value;
@@ -556,7 +570,7 @@ function saveAll() {
   });
   updatedConfig.image_generation_providers = providersList;
 
-  // Gather parameter alias list
+  // 收集参数别名列表。
   var aliasList = [];
   document.querySelectorAll('#alias-list .list-item-card').forEach(function (card) {
     var name = card.querySelector('.alias-name').value.trim();
@@ -567,7 +581,7 @@ function saveAll() {
   });
   updatedConfig.params_alias_map = aliasList;
 
-  // Build substitutions mapping from persona replace list cards
+  // 从人设替换卡片构造映射。
   var substitutionsMap = {};
   document.querySelectorAll('#persona-replace-list .persona-replace-card').forEach(function (card) {
     var targetId = card.querySelector('.target-id-input').value.trim();
@@ -580,7 +594,7 @@ function saveAll() {
     substitutionsMap[targetId] = imgUrls;
   });
 
-  // Save via endpoint
+  // 通过后端接口保存。
   Promise.all([
     SDK.apiPost('config', updatedConfig),
     SDK.apiPost('substitutions', substitutionsMap)
@@ -590,7 +604,7 @@ function saveAll() {
       var subsRes = results[1];
       if (configRes && configRes.status === 'ok' && subsRes && subsRes.status === 'ok') {
         config = updatedConfig;
-        showToast('配置已保存并立即生效');
+        showToast(configRes.message || '配置已保存，重新加载插件后生效');
       } else {
         var errMsg = [];
         if (!configRes || configRes.status !== 'ok') errMsg.push(configRes ? configRes.message : '基本配置保存失败');
@@ -603,6 +617,6 @@ function saveAll() {
     })
     .finally(function () {
       btnSave.disabled = false;
-      btnSave.textContent = '💾 保存并生效';
+      btnSave.textContent = '💾 保存配置';
     });
 }

@@ -1,4 +1,5 @@
 export default {
+  // 处理 Worker 的图片上传与公开读取请求。
   async fetch(request, env) {
     const url = new URL(request.url);
     const key = url.pathname.replace(/^\/+/, "");

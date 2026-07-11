@@ -1,6 +1,7 @@
-/* Theme variables, reset, layout, headers, tabs navigation, common animations, and responsiveness */
+/* 主题变量、重置、布局、页头、标签导航、通用动画和响应式样式 */
 
 :root {
+  color-scheme: light;
   --bg: #f5f5f7;
   --text: #1d1d1f;
   --text2: #86868b;
@@ -32,6 +33,7 @@
 }
 
 html[data-theme="dark"] {
+  color-scheme: dark;
   --bg: #000;
   --text: #f5f5f7;
   --text2: #86868b;
@@ -107,7 +109,7 @@ header h1 {
 }
 header .sub { font-size: 14px; color: var(--text2); }
 
-/* Navigation Tabs */
+/* 标签导航 */
 .tabs-nav {
   position: sticky;
   top: 0;
@@ -153,10 +155,10 @@ html[data-theme="dark"] .tab-btn.active {
 .tab-panel { display: none; animation: fadeIn .3s cubic-bezier(.22, 1, .36, 1) forwards; }
 .tab-panel.active { display: block; }
 
-/* Global Animations */
+/* 全局动画 */
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Responsiveness */
+/* 响应式适配 */
 @media (max-width: 768px) {
   .container { padding: 0 16px; }
   header { padding: 30px 0 16px; }
