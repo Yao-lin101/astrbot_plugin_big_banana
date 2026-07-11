@@ -61,6 +61,7 @@ class ProviderConfigManager:
                 model=raw_item.get("model", ""),
                 stream=raw_item.get("stream", False),
                 enable_proxy=raw_item.get("enable_proxy", False),
+                max_images=raw_item.get("max_images", 6),
                 raw_config=raw_item,
             )
         return result

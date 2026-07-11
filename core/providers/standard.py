@@ -5,6 +5,7 @@ import json
 import math
 import random
 from io import BytesIO
+from typing import Any
 
 from aiohttp import ClientSession, ClientTimeout, FormData
 from PIL import Image
@@ -182,42 +183,39 @@ class StandardProvider(BaseProvider):
         response_text = ""
         try:
             body_context = self._build_body_context()
+            post_kwargs: dict[str, Any] = {
+                "url": self._build_api_url(),
+                "headers": self._build_headers(api_key),
+                "proxy": self.proxy,
+                "timeout": self.timeout,
+            }
             if isinstance(body_context, FormData):
-                response = await self.session.post(
-                    url=self._build_api_url(),
-                    headers=self._build_headers(api_key),
-                    data=body_context,
-                    proxy=self.proxy,
-                    timeout=self.timeout,
-                )
+                post_kwargs["data"] = body_context
             else:
-                response = await self.session.post(
-                    url=self._build_api_url(),
-                    headers=self._build_headers(api_key),
-                    json=body_context,
-                    proxy=self.proxy,
-                    timeout=self.timeout,
+                post_kwargs["json"] = body_context
+
+            async with self.session.post(**post_kwargs) as resp:
+                response = resp
+                response_text = await resp.text()
+                result = json.loads(response_text)
+                if resp.status == 200:
+                    image_sources, reason = self._extract_result(result)
+                    images = await self._build_images(image_sources)
+                    if images:
+                        return ProviderCallResult(images=images, status_code=200)
+                    return self._missing_image_result(
+                        reason,
+                        response_text=response_text,
+                    )
+                # 解析错误原因
+                err_msg = result.get("error", {}).get("message", "未知原因")
+                logger.error(
+                    f"[BIG BANANA] 图片生成失败，状态码: {resp.status}，原因: {err_msg}"
                 )
-            response_text = await response.text()
-            result = json.loads(response_text)
-            if response.status == 200:
-                image_sources, reason = self._extract_result(result)
-                images = await self._build_images(image_sources)
-                if images:
-                    return ProviderCallResult(images=images, status_code=200)
-                return self._missing_image_result(
-                    reason,
-                    response_text=response_text,
+                return ProviderCallResult(
+                    status_code=resp.status,
+                    error_message=err_msg,
                 )
-            # 解析错误原因
-            err_msg = result.get("error", {}).get("message", "未知原因")
-            logger.error(
-                f"[BIG BANANA] 图片生成失败，状态码: {response.status}，原因: {err_msg}"
-            )
-            return ProviderCallResult(
-                status_code=response.status,
-                error_message=err_msg,
-            )
         except asyncio.TimeoutError as e:
             logger.error(f"[BIG BANANA] 网络请求超时: {e}")
             return ProviderCallResult(
@@ -244,46 +242,45 @@ class StandardProvider(BaseProvider):
         response_text = ""
         try:
             body_context = self._build_body_context()
+            post_kwargs: dict[str, Any] = {
+                "url": self._build_api_url(),
+                "headers": self._build_headers(api_key),
+                "proxy": self.proxy,
+                "timeout": self.timeout,
+            }
             if isinstance(body_context, FormData):
-                response = await self.session.post(
-                    url=self._build_api_url(),
-                    headers=self._build_headers(api_key),
-                    data=body_context,
-                    proxy=self.proxy,
-                    timeout=self.timeout,
-                )
+                post_kwargs["data"] = body_context
             else:
-                response = await self.session.post(
-                    url=self._build_api_url(),
-                    headers=self._build_headers(api_key),
-                    json=body_context,
-                    proxy=self.proxy,
-                    timeout=self.timeout,
+                post_kwargs["json"] = body_context
+
+            async with self.session.post(**post_kwargs) as resp:
+                response = resp
+                data = b""
+                async for chunk in resp.content.iter_chunked(1024):
+                    data += chunk
+                response_text = data.decode("utf-8")
+                if resp.status == 200:
+                    image_sources, reason = self._extract_stream_result(response_text)
+                    images = await self._build_images(image_sources)
+                    if images:
+                        return ProviderCallResult(images=images, status_code=200)
+                    return self._missing_image_result(
+                        reason,
+                        response_text=response_text,
+                    )
+                # 解析错误原因
+                err_msg = (
+                    json.loads(response_text)
+                    .get("error", {})
+                    .get("message", "未知原因")
                 )
-            data = b""
-            async for chunk in response.content.iter_chunked(1024):
-                data += chunk
-            response_text = data.decode("utf-8")
-            if response.status == 200:
-                image_sources, reason = self._extract_stream_result(response_text)
-                images = await self._build_images(image_sources)
-                if images:
-                    return ProviderCallResult(images=images, status_code=200)
-                return self._missing_image_result(
-                    reason,
-                    response_text=response_text,
+                logger.error(
+                    f"[BIG BANANA] 图片生成失败，状态码: {resp.status}，原因: {err_msg}"
                 )
-            # 解析错误原因
-            err_msg = (
-                json.loads(response_text).get("error", {}).get("message", "未知原因")
-            )
-            logger.error(
-                f"[BIG BANANA] 图片生成失败，状态码: {response.status}，原因: {err_msg}"
-            )
-            return ProviderCallResult(
-                status_code=response.status,
-                error_message=err_msg,
-            )
+                return ProviderCallResult(
+                    status_code=resp.status,
+                    error_message=err_msg,
+                )
         except asyncio.TimeoutError as e:
             logger.error(f"[BIG BANANA] 网络请求超时: {e}")
             return ProviderCallResult(

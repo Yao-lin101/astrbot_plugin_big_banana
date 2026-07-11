@@ -15,6 +15,8 @@ class CommonConfig:
     """请求超时时间, 单位: 秒"""
     proxy: str | None = None
     """代理"""
+    strip_metadata: bool = True
+    """是否在图片处理中抹除所有可能带隐私的元数据"""
 
 
 @dataclass(repr=False, slots=True)

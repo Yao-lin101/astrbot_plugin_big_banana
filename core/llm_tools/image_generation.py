@@ -42,8 +42,9 @@ PRESET_DESCRIPTION = (
 
 REFERENCES_DESCRIPTION = (
     "Optional list of reference image URLs, cached local image paths, or platform "
-    "user IDs (for avatar references). Do not use base64 or data URLs. Reuse "
-    "existing paths/URLs from the conversation history if available."
+    "user IDs prefixed with '@' (e.g., '@123456', '@username') for avatar references. "
+    "Do not use base64 or data URLs. Reuse existing paths/URLs from the conversation "
+    "history if available."
 )
 
 
@@ -372,6 +373,7 @@ class BigBananaImageGenerationTool(FunctionTool[AstrAgentContext]):
                     event=event,
                     result=self._build_callback_result_chain(result),
                     params=params,
+                    is_success=not result.error_message,
                 )
                 if handled:
                     return None
@@ -396,6 +398,7 @@ class BigBananaImageGenerationTool(FunctionTool[AstrAgentContext]):
                     event=event,
                     result=self._build_callback_result_chain(completion_text),
                     params=params,
+                    is_success=not result.error_message,
                 )
                 if handled:
                     return None

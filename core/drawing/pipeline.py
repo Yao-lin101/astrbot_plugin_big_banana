@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class DrawingPipeline:
-    """根据已准备好的图片列表执行图片生成和结果收尾。"""
+    """绘图管道"""
 
     def __init__(self, plugin: BigBanana) -> None:
         """初始化绘图组件。"""
@@ -20,9 +20,22 @@ class DrawingPipeline:
         self.image_saver = ImageSaver()
 
     async def run(
-        self, params: dict, image_list: list[ImageResource]
+        self, params: dict, image_list: list[ImageResource] | None
     ) -> GenerationResult:
         """负责生成、上传/保存和错误收尾"""
+        # 抹除输入图片的隐私元数据
+        if self.plugin.common_config.strip_metadata and image_list:
+            cleaned_list = []
+            for img in image_list:
+                stripped = ImageResource.strip_metadata(img.bytes)
+                if stripped is None:
+                    logger.warning("[BIG BANANA] 无法处理图片，已移除该参考图")
+                    continue
+                img.bytes = stripped
+                img._b64_cache = None
+                cleaned_list.append(img)
+            image_list[:] = cleaned_list
+
         # 调度底层提供商生成图片
         dispatch_result = await self.plugin.dispatcher.dispatch(
             params=params, image_list=image_list

@@ -345,10 +345,17 @@ def handle_image(
                 # 处理多帧图片，取第一帧
                 if getattr(img, "is_animated", False):
                     img.seek(0)
-                # 转换成jpeg格式图片
-                img = img.convert("RGB")
+                # 转换成jpeg格式图片并处理透明背景（转为白色）
+                if img.mode in ("RGBA", "LA") or (
+                    img.mode == "P" and "transparency" in img.info
+                ):
+                    background = Image.new("RGB", img.size, (255, 255, 255))
+                    background.paste(img, mask=img.convert("RGBA").split()[3])
+                    img = background
+                else:
+                    img = img.convert("RGB")
                 buf = BytesIO()
-                img.save(buf, format="JPEG", quality=100)  # 设置100尽量避免画质损失
+                img.save(buf, format="JPEG", quality=95, optimize=True)
                 return ("image/jpeg", buf.getvalue())
     except Exception as e:
         logger.warning(f"[BIG BANANA] 图片处理失败: {e}")

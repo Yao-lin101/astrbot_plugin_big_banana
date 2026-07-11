@@ -41,6 +41,7 @@ class CallbackDispatcher:
         event: AstrMessageEvent,
         result: MessageChain,
         params: dict,
+        is_success: bool,
     ) -> bool:
         """Invoke the configured upstream completion callback.
 
@@ -48,9 +49,10 @@ class CallbackDispatcher:
             event: Event that initiated the image generation tool call.
             result: Message chain for the upstream plugin to deliver to the AI.
             params: Final image generation parameters.
+            is_success: Whether the image generation was successful.
 
         Returns:
-            True when the upstream callback completed successfully.
+            True when the upstream callback completed successfully (or did not return a bool).
         """
         config = self.plugin.llm_tools_config
         plugin_name = config.background_callback_plugin.strip()
@@ -73,12 +75,16 @@ class CallbackDispatcher:
                 result=result,
                 params=params,
                 unified_msg_origin=event.unified_msg_origin,
+                is_success=is_success,
             )
+            res = None
             if inspect.isasyncgen(callback_result):
-                async for _ in callback_result:
-                    pass
+                async for item in callback_result:
+                    res = item
             elif inspect.isawaitable(callback_result):
-                await callback_result
+                res = await callback_result
+            else:
+                res = callback_result
         except Exception as e:
             logger.warning(
                 f"[BIG BANANA] 后台绘图回调 {plugin_name}.{method_name} 执行失败: {e}",
@@ -89,4 +95,6 @@ class CallbackDispatcher:
         logger.info(
             f"[BIG BANANA] 后台绘图结果已交给回调插件 {plugin_name}.{method_name}"
         )
+        if isinstance(res, bool):
+            return res
         return True

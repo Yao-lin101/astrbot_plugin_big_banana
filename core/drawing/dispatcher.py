@@ -22,7 +22,7 @@ class ProviderDispatcher:
     async def dispatch(
         self,
         params: dict,
-        image_list: list[ImageResource],
+        image_list: list[ImageResource] | None,
     ) -> GenerationResult:
         """按配置顺序逐个尝试绘图提供商，返回统一的生成结果。"""
         logger.info(
@@ -51,11 +51,24 @@ class ProviderDispatcher:
                 logger.info(f"[BIG BANANA] {last_err}，已跳过")
                 continue
 
+            # Truncate image_list if it exceeds provider's max_images (skip if -1)
+            provider_image_list = image_list
+            if (
+                image_list
+                and provider_config.max_images >= 0
+                and len(image_list) > provider_config.max_images
+            ):
+                logger.warning(
+                    f"[BIG BANANA] 提供商 {provider_config.name} 限制最大图片数为 {provider_config.max_images}，"
+                    f"当前有 {len(image_list)} 张图片，已截断为 {provider_config.max_images} 张"
+                )
+                provider_image_list = image_list[:provider_config.max_images]
+
             # 使用统一 provider 注册表分发
             result = await self._dispatch_provider(
                 provider_config,
                 params=params,
-                image_list=image_list,
+                image_list=provider_image_list,
             )
             if result.error_message is None:
                 return result
@@ -68,7 +81,7 @@ class ProviderDispatcher:
         provider_config: ProviderConfig,
         *,
         params: dict,
-        image_list: list[ImageResource],
+        image_list: list[ImageResource] | None,
     ) -> GenerationResult:
         """加载具体 provider 实例并执行生成。"""
         # 读取提供商类对象

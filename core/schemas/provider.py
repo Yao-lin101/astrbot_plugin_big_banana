@@ -30,6 +30,8 @@ class ProviderConfig:
     """是否启用流式响应"""
     enable_proxy: bool = False
     """是否启用代理配置"""
+    max_images: int = 6
+    """该提供商支持的最大输入图片数量"""
     raw_config: dict[str, Any] = field(default_factory=dict)
     """原始提供商配置，可以用于查询提供商的额外配置参数"""
 
