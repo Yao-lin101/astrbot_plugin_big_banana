@@ -1256,7 +1256,7 @@
                 "description": "后台回调方法",
                 "type": "string",
                 "default": "",
-                "hint": "上游插件中的方法名；astrbot_plugin_giftia 定义的方法名为 on_drawing_complete。将以 event、result、params、unified_msg_origin 四个关键字参数调用。result 始终为 MessageChain：未开启直接发送时包含图片或失败文本；开启后插件会先发送图片，消息链包含文字完成状态。上游插件可自行将消息链交给 AI 处理。unified_msg_origin 可用于定位原会话。可定义为同步函数、协程或异步生成器。"
+                "hint": "上游插件中的方法名；astrbot_plugin_giftia 定义的方法名为 on_drawing_complete。将以 event、result、params、unified_msg_origin、is_success 五个关键字参数调用。result 始终为 MessageChain；params 是最终生成参数；unified_msg_origin 是任务提交时的原会话标识快照；is_success 表示生成是否成功。未开启直接发送时 result 包含尚未发送的媒体或失败文本；开启后插件会先发送媒体，result 仅包含文字完成状态。方法可为同步函数、协程或异步生成器；显式返回 False 表示未接管并触发 BigBanana 回退处理，返回 True 或非 bool 值表示已接管。"
             }
         }
     },

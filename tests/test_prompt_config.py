@@ -90,3 +90,31 @@ def test_rebuild_restores_internal_default_after_config_override_is_removed() ->
         "with_audio": False,
         "watermark_enabled": True,
     }
+
+
+def test_valueless_boolean_parameter_preserves_following_prompt() -> None:
+    manager = PromptConfigManager({})
+
+    params = manager.parse_prompt_params("--url castle at night")
+
+    assert params == {"url": True, "prompt": "castle at night"}
+
+
+def test_explicit_boolean_value_still_consumes_only_its_value() -> None:
+    manager = PromptConfigManager({})
+
+    params = manager.parse_prompt_params("--url false castle at night")
+
+    assert params == {"url": False, "prompt": "castle at night"}
+
+
+def test_consecutive_valueless_boolean_parameters_preserve_prompt() -> None:
+    manager = PromptConfigManager({})
+
+    params = manager.parse_prompt_params("--url --sub_brain castle at night")
+
+    assert params == {
+        "url": True,
+        "sub_brain": True,
+        "prompt": "castle at night",
+    }

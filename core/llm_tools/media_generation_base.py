@@ -38,6 +38,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
         image_references: list[str] | None = None,
     ) -> ToolExecResult | None:
         task_id = plugin.task_manager.build_task_id(event)
+        unified_msg_origin = event.unified_msg_origin
         if plugin.task_manager.is_running(task_id):
             return "该任务已在执行中，请勿重复操作。"
 
@@ -71,6 +72,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                         event,
                         params,
                         image_references,
+                        unified_msg_origin=unified_msg_origin,
                         is_background_task=True,
                         use_background_callback=use_background_callback,
                         direct_send_result=direct_send_result,
@@ -100,6 +102,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                 event,
                 params,
                 image_references,
+                unified_msg_origin=unified_msg_origin,
                 is_background_task=False,
                 direct_send_result=direct_send_result,
             )
@@ -114,6 +117,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
         params: dict,
         image_references: list[str] | None = None,
         *,
+        unified_msg_origin: str,
         is_background_task: bool = False,
         use_background_callback: bool = False,
         direct_send_result: bool = True,
@@ -137,6 +141,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                     event=event,
                     result=self._build_callback_result_chain(result),
                     params=params,
+                    unified_msg_origin=unified_msg_origin,
                     is_success=not result.error_message,
                 )
                 if handled:
@@ -157,6 +162,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                     event=event,
                     result=self._build_callback_result_chain(completion_text),
                     params=params,
+                    unified_msg_origin=unified_msg_origin,
                     is_success=not result.error_message,
                 )
                 if handled:

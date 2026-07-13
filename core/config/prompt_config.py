@@ -178,10 +178,8 @@ class PromptConfigManager:
                             if value.lower() in {"true", "false"}:
                                 params[key] = value.lower() == "true"
                             else:
-                                logger.warning(
-                                    f"[BIG BANANA] 参数 --{key} 需要布尔值，"
-                                    f"已忽略无效值：{value}"
-                                )
+                                params[key] = True
+                                tokens_iter = itertools.chain([value], tokens_iter)
                         elif key in _INTEGER_PARAMS:
                             try:
                                 parsed_value = int(value)

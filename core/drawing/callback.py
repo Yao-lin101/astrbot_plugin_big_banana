@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class CallbackDispatcher:
-    """Dispatch LLM background image results to a configured plugin."""
+    """Dispatch LLM background media results to a configured plugin."""
 
     def __init__(self, plugin: BigBanana) -> None:
         """Store the plugin instance used to access configuration and context.
@@ -41,15 +41,17 @@ class CallbackDispatcher:
         event: AstrMessageEvent,
         result: MessageChain,
         params: dict,
+        unified_msg_origin: str,
         is_success: bool,
     ) -> bool:
         """Invoke the configured upstream completion callback.
 
         Args:
-            event: Event that initiated the image generation tool call.
+            event: Event that initiated the media generation tool call.
             result: Message chain for the upstream plugin to deliver to the AI.
-            params: Final image generation parameters.
-            is_success: Whether the image generation was successful.
+            params: Final media generation parameters.
+            unified_msg_origin: Session origin captured when the task was submitted.
+            is_success: Whether the media generation was successful.
 
         Returns:
             True when the upstream callback completed successfully (or did not return a bool).
@@ -74,7 +76,7 @@ class CallbackDispatcher:
                 event=event,
                 result=result,
                 params=params,
-                unified_msg_origin=event.unified_msg_origin,
+                unified_msg_origin=unified_msg_origin,
                 is_success=is_success,
             )
             res = None
