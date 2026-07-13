@@ -56,9 +56,9 @@ class VertexAIAnonymousProvider(BaseProvider):
         body = self._build_body_context()
 
         err_msg = None
-        # 普通失败和验证失败共用计数，刷新 token 时也不清零。
         attempt = 0
         refresh_count = 0
+        verify_failure_count = 0
         while True:
             # 填充recaptcha_token
             body["variables"]["recaptchaToken"] = recaptcha_token
@@ -82,20 +82,26 @@ class VertexAIAnonymousProvider(BaseProvider):
                 return GenerationResult(error_message=err_msg)
             # 3：通常是recaptcha_token失效或验证失败
             if status == 3:
-                # 这种情况下使用同一个 token 原地重试
-                if err_msg and "Failed to verify action" in err_msg:
-                    attempt += 1
+                is_verify_failure = bool(
+                    err_msg and "Failed to verify action" in err_msg
+                )
+                is_invalid_token = bool(
+                    err_msg and "Recaptcha token is invalid" in err_msg
+                )
+                if is_verify_failure:
+                    verify_failure_count += 1
+                    # 每个 token 的第一次验证失败不计入重试次数。
+                    verify_retry_count = verify_failure_count - 1
                     logger.warning(
                         f"[BIG BANANA] recaptcha_token 验证失败次数："
-                        f"{attempt}/{self.retry_before_switch}"
+                        f"{verify_retry_count}/{self.retry_before_switch}"
                     )
-                    # 达到上限后返回错误，由调度器切换到下一个提供商。
-                    if attempt >= self.retry_before_switch:
-                        return GenerationResult(error_message=err_msg)
-                    await asyncio.sleep(1)
-                    continue
-                # recaptcha_token 已失效，刷新后重试
-                if err_msg and "Recaptcha token is invalid" in err_msg:
+                    if verify_retry_count < self.retry_before_switch:
+                        await asyncio.sleep(self.retry_delay)
+                        continue
+
+                # 验证失败重试达到上限或 token 明确失效时，重新获取 token。
+                if is_verify_failure or is_invalid_token:
                     if refresh_count >= self.max_refresh:
                         logger.warning(
                             "[BIG BANANA] recaptcha_token 刷新次数达到上限，"
@@ -104,7 +110,8 @@ class VertexAIAnonymousProvider(BaseProvider):
                         return GenerationResult(error_message=err_msg)
                     refresh_count += 1
                     logger.warning(
-                        f"[BIG BANANA] recaptcha_token 已失效，正在刷新后重试 "
+                        f"[BIG BANANA] recaptcha_token 重试达到上限或已失效，"
+                        f"正在刷新后重试 "
                         f"({refresh_count}/{self.max_refresh})"
                     )
                     recaptcha_token = await self._get_recaptcha_token()
@@ -115,6 +122,7 @@ class VertexAIAnonymousProvider(BaseProvider):
                         return GenerationResult(
                             error_message="获取 recaptcha_token 失败"
                         )
+                    verify_failure_count = 0
                     continue
                 # 其他错误直接返回
                 return GenerationResult(error_message=err_msg)

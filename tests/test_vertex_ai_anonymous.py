@@ -64,35 +64,22 @@ def test_response_modalities_are_omitted_when_disabled() -> None:
     assert "responseModalities" not in body["variables"]["generationConfig"]
 
 
-def test_verify_failures_accumulate_across_token_refreshes(monkeypatch) -> None:
+def test_verify_failures_reuse_token_until_retry_limit(monkeypatch) -> None:
     provider = build_provider()
-    provider._get_recaptcha_token = AsyncMock(
-        side_effect=["token-1", "token-2", "token-3"]
-    )
-    provider._call_vertex_api = AsyncMock(
-        side_effect=[
-            ProviderCallResult(
+    provider.retry_before_switch = 2
+    provider._get_recaptcha_token = AsyncMock(side_effect=["token-1", "token-2"])
+    submitted_tokens = []
+
+    async def call_vertex(body: dict) -> ProviderCallResult:
+        submitted_tokens.append(body["variables"]["recaptchaToken"])
+        if len(submitted_tokens) <= 3:
+            return ProviderCallResult(
                 status_code=3,
                 error_message="Failed to verify action",
-            ),
-            ProviderCallResult(
-                status_code=3,
-                error_message="Recaptcha token is invalid",
-            ),
-            ProviderCallResult(
-                status_code=3,
-                error_message="Failed to verify action",
-            ),
-            ProviderCallResult(
-                status_code=3,
-                error_message="Recaptcha token is invalid",
-            ),
-            ProviderCallResult(
-                status_code=3,
-                error_message="Failed to verify action",
-            ),
-        ]
-    )
+            )
+        return ProviderCallResult(images=[Mock(bytes=b"image")], status_code=200)
+
+    provider._call_vertex_api = AsyncMock(side_effect=call_vertex)
     warning = Mock()
 
     async def no_sleep(_delay: float) -> None:
@@ -103,16 +90,18 @@ def test_verify_failures_accumulate_across_token_refreshes(monkeypatch) -> None:
 
     result = asyncio.run(provider.generate_images())
 
-    assert result.error_message == "Failed to verify action"
+    assert result.images
+    assert submitted_tokens == ["token-1", "token-1", "token-1", "token-2"]
+    assert provider._get_recaptcha_token.await_count == 2
     verify_logs = [
         call.args[0]
         for call in warning.call_args_list
         if "验证失败次数" in call.args[0]
     ]
     assert verify_logs == [
-        "[BIG BANANA] recaptcha_token 验证失败次数：1/3",
-        "[BIG BANANA] recaptcha_token 验证失败次数：2/3",
-        "[BIG BANANA] recaptcha_token 验证失败次数：3/3",
+        "[BIG BANANA] recaptcha_token 验证失败次数：0/2",
+        "[BIG BANANA] recaptcha_token 验证失败次数：1/2",
+        "[BIG BANANA] recaptcha_token 验证失败次数：2/2",
     ]
 
 

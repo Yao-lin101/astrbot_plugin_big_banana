@@ -1250,13 +1250,13 @@
                 "description": "后台回调插件",
                 "type": "string",
                 "default": "",
-                "hint": "后台绘图完成后接收结果的上游插件名称。与后台回调方法同时填写才生效。回调调用失败会自动回退到主动发送。"
+                "hint": "后台绘图完成后接收结果的上游插件名称。与后台回调方法同时填写才生效。使用 Giftia 时填写 astrbot_plugin_giftia。回调调用失败会自动回退到主动发送。"
             },
             "background_callback_method": {
                 "description": "后台回调方法",
                 "type": "string",
                 "default": "",
-                "hint": "上游插件中的方法名，将以 event、result、params、unified_msg_origin 四个关键字参数调用。result 始终为 MessageChain：未开启直接发送时包含图片或失败文本；开启后插件会先发送图片，消息链包含文字完成状态。上游插件可自行将消息链交给 AI 处理。unified_msg_origin 可用于定位原会话。可定义为同步函数、协程或异步生成器。"
+                "hint": "上游插件中的方法名；astrbot_plugin_giftia 定义的方法名为 on_drawing_complete。将以 event、result、params、unified_msg_origin 四个关键字参数调用。result 始终为 MessageChain：未开启直接发送时包含图片或失败文本；开启后插件会先发送图片，消息链包含文字完成状态。上游插件可自行将消息链交给 AI 处理。unified_msg_origin 可用于定位原会话。可定义为同步函数、协程或异步生成器。"
             }
         }
     },
