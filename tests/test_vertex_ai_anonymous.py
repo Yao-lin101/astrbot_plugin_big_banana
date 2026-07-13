@@ -21,6 +21,49 @@ def build_provider() -> VertexAIAnonymousProvider:
     return provider
 
 
+def build_body_with_modalities(response_modalities: str) -> dict:
+    plugin = SimpleNamespace(
+        params_config=SimpleNamespace(
+            aspect_ratio="default",
+            google_search=False,
+            image_size="1K",
+        )
+    )
+    config = ProviderConfig(
+        provider_type="Vertex_AI_Anonymous",
+        name="vertex_ai_anonymous",
+        model="gemini-3-pro-image-preview",
+        raw_config={
+            "response_modalities": response_modalities,
+            "system_prompt": "",
+        },
+    )
+    provider = VertexAIAnonymousProvider(plugin, config, {"prompt": "test"})
+    provider._body_context_cache = None
+    return provider._build_body_context()
+
+
+def test_response_modalities_are_passed_to_vertex_variables() -> None:
+    body = build_body_with_modalities("['TEXT','IMAGE']")
+
+    assert body["variables"]["generationConfig"]["responseModalities"] == [
+        "TEXT",
+        "IMAGE",
+    ]
+
+
+def test_image_response_modality_is_passed_by_default() -> None:
+    body = build_body_with_modalities("['IMAGE']")
+
+    assert body["variables"]["generationConfig"]["responseModalities"] == ["IMAGE"]
+
+
+def test_response_modalities_are_omitted_when_disabled() -> None:
+    body = build_body_with_modalities("无")
+
+    assert "responseModalities" not in body["variables"]["generationConfig"]
+
+
 def test_verify_failures_accumulate_across_token_refreshes(monkeypatch) -> None:
     provider = build_provider()
     provider._get_recaptcha_token = AsyncMock(

@@ -273,13 +273,47 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
                     )
                 )
 
-            return await plugin.drawing_pipeline.run(
+            result = await plugin.drawing_pipeline.run(
                 params,
                 image_list=collected_images,
             )
+            self._truncate_excess_images(plugin, params, result)
+            return result
         except Exception as e:
             logger.error(f"[BIG BANANA] LLM 工具绘图执行失败: {e}", exc_info=True)
             return GenerationResult(error_message="图片生成发生内部错误，请稍后重试。")
+
+    @staticmethod
+    def _truncate_excess_images(
+        plugin: BigBanana,
+        params: dict,
+        result: GenerationResult,
+    ) -> None:
+        """按本次请求的生成数量限制 LLM 图片工具结果。"""
+        if (
+            result.error_message
+            or not plugin.llm_tools_config.llm_tool_truncate_images
+        ):
+            return
+
+        requested_count = params.get("n", 1)
+        if (
+            isinstance(requested_count, bool)
+            or not isinstance(requested_count, int)
+            or requested_count < 1
+        ):
+            requested_count = 1
+
+        original_count = len(result.images)
+        if original_count <= requested_count:
+            return
+
+        result.images = result.images[:requested_count]
+        result.urls = result.urls[:requested_count]
+        logger.info(
+            f"[BIG BANANA] LLM 图片工具收到 {original_count} 张图片，"
+            f"已按生成数量截断为 {requested_count} 张"
+        )
 
     @staticmethod
     def _build_callback_result_chain(

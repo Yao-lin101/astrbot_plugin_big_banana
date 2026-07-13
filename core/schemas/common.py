@@ -91,6 +91,8 @@ class LlmToolsConfig:
     """ Tools调用使用后台任务 """
     llm_tool_direct_send_result: bool = False
     """ LLM 工具是否直接向聊天窗口发送图片结果 """
+    llm_tool_truncate_images: bool = False
+    """ 是否按生成数量截断 LLM 图片工具的返回结果 """
     llm_tool_restrict_private_network: bool = True
     """ 是否限制 LLM 工具读取内网图片 URL """
     background_callback_plugin: str = ""

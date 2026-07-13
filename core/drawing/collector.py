@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import random
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import astrbot.api.message_components as Comp
 from astrbot.api import logger
+from astrbot.api.star import StarTools
 from astrbot.core.utils.astrbot_path import get_astrbot_temp_path
 
 from ..schemas import SUPPORTED_FILE_FORMATS_WITH_DOT
@@ -207,7 +209,7 @@ class ImageCollector:
             ref = reference.strip()
             if not ref:
                 continue
-            # 带上@表示头像引用是提示词约定的，否则可能会被识别出url或者path
+            # 带上@表示头像引用是提示词约定的，否则可能会被识别成url或者path
             if ref.startswith("@") or ref.isdigit():
                 user_id = ref.removeprefix("@")
                 avatar_url = await self._get_avatar_url(user_id, self.event)
@@ -221,11 +223,13 @@ class ImageCollector:
                 continue
 
             # 支持 Giftia 图片哈希 (16位 xxh3 或 32位 md5)
-            import re
             if re.fullmatch(r"[a-fA-F0-9]{16}|[a-fA-F0-9]{32}", ref):
                 try:
-                    from astrbot.api.star import StarTools
-                    giftia_cache_file = StarTools.get_data_dir("astrbot_plugin_giftia") / "media_cache" / ref
+                    giftia_cache_file = (
+                        StarTools.get_data_dir("astrbot_plugin_giftia")
+                        / "media_cache"
+                        / ref
+                    )
                     if giftia_cache_file.exists():
                         self.urls.append(giftia_cache_file)
                         continue
@@ -365,7 +369,10 @@ class ImageCollector:
             ]
             try:
                 from astrbot.api.star import StarTools
-                giftia_cache = StarTools.get_data_dir("astrbot_plugin_giftia") / "media_cache"
+
+                giftia_cache = (
+                    StarTools.get_data_dir("astrbot_plugin_giftia") / "media_cache"
+                )
                 allowed_roots.append(giftia_cache)
             except Exception:
                 pass

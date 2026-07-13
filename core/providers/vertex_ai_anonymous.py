@@ -37,12 +37,12 @@ class VertexAIAnonymousProvider(BaseProvider):
             else None
         )
         self.max_refresh = max(
-            0, int(self.provider_config.raw_config.get("max_refresh", 3))
+            0, int(self.provider_config.raw_config.get("max_refresh", 5))
         )
         self.retry_before_switch = max(
-            1, int(self.provider_config.raw_config.get("retry_before_switch", 3))
+            1, int(self.provider_config.raw_config.get("retry_before_switch", 5))
         )
-        self.retry_delay = self.provider_config.raw_config["retry_delay"]
+        self.retry_delay = self.provider_config.raw_config.get("retry_delay", 1)
         self._body_context_cache: dict | None = None
 
     async def generate_images(self) -> GenerationResult:

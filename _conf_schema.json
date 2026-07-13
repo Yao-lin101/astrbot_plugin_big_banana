@@ -6,9 +6,9 @@
             "bnn {{user_text}} --min_images 1",
             "bnt {{user_text}} --min_images 0",
             "bna {{user_text}} --min_images 0 --gather_mode",
-            "bnv {{user_text}} --capability video_generation --min_images 0 --max_images 1 --quality speed --fps 30 --size default --with_audio false --watermark_enabled true",
-            "llm_default {{user_text}} --min_images 0 --max_images 6 --aspect_ratio default --image_size 1K --google_search true --gather_mode false --n 1 --partial_images 0 --size default --url false --moderation auto",
-            "llm_video_default {{user_text}} --capability video_generation --min_images 0 --max_images 1 --quality speed --fps 30 --size default --with_audio false --watermark_enabled true",
+            "bnv {{user_text}} --capability video_generation --min_images 0 --max_images 1",
+            "llm_default {{user_text}} --min_images 0 --max_images 6",
+            "llm_video_default {{user_text}} --capability video_generation --min_images 0 --max_images 1",
             "手办化 Create a premium, collectible 1/7 scale standalone figurine based on the image, meticulously replicating the character, made from smooth PVC and ABS plastic with a professional matte finish. It stands on a minimalist transparent acrylic base. Next to it is its retail packaging box displaying the price and brand information, with the figure wrapped in plastic inside the slightly larger box. They are naturally arranged on a clean wooden table surrounded by reference books, with a bookshelf in the background and soft afternoon sunlight streaming through the window. Photo-realistic, DSLR effect, depth of field, bokeh background."
         ],
         "hint": "格式1: 触发词 提示词 --参数1 参数值1 --参数2 参数值2。格式2: [触发词1,触发词2] 提示词 --参数1 参数值1 --参数2 参数值2。触发词和触发词列表不能有空格。若省略参数值，则视为布尔值true。占位提示词{{user_text}}：占位提示词会被消息内容覆盖，可以在占位提示词前后添加固定的预设提示词。可选的参数请参考 README.md。触发词冲突可能会相互覆盖。"
@@ -29,9 +29,9 @@
                 "base_url": "https://cloudconsole-pa.clients6.google.com",
                 "recaptcha_base_api": "https://www.google.com",
                 "system_prompt": "",
-                "max_refresh": 3,
-                "retry_before_switch": 3,
-                "retry_delay": 2.0,
+                "max_refresh": 5,
+                "retry_before_switch": 5,
+                "retry_delay": 1,
                 "model": "gemini-3-pro-image-preview",
                 "response_modalities": "['IMAGE']",
                 "enable_proxy": false
@@ -96,19 +96,19 @@
                     "max_refresh": {
                         "description": "Token 最大刷新次数",
                         "type": "int",
-                        "default": 3,
+                        "default": 5,
                         "hint": "初次获取 Token 后，最多允许重新获取 Token 的次数；达到上限后切换到下一个提供商。"
                     },
                     "retry_before_switch": {
                         "description": "切换前重试次数",
                         "type": "int",
-                        "default": 3,
+                        "default": 5,
                         "hint": "验证失败或普通请求失败累计达到该次数后，切换到下一个提供商。"
                     },
                     "retry_delay": {
                         "description": "重试延迟",
                         "type": "float",
-                        "default": 2,
+                        "default": 1,
                         "hint": "较大的重试延迟或许可以规避短时间内的集中失败的问题，单位：秒"
                     },
                     "model": {
@@ -191,6 +191,12 @@
                         "type": "string",
                         "default": "https://generativelanguage.googleapis.com",
                         "hint": "不需要填写 /v1beta 路径"
+                    },
+                    "system_prompt": {
+                        "description": "系统提示词",
+                        "type": "text",
+                        "default": "",
+                        "hint": "留空将不传递这个参数。"
                     },
                     "model": {
                         "description": "模型",
@@ -1221,6 +1227,12 @@
                 "type": "bool",
                 "default": false,
                 "hint": "关闭时将图片结果返回给 AI 或上游回调，由其决定发送、重新生成或执行其他操作；开启时由插件直接发送图片，再将文字完成状态返回给 AI 或上游回调。"
+            },
+            "llm_tool_truncate_images": {
+                "description": "按生成数量截断返回图片",
+                "type": "bool",
+                "default": false,
+                "hint": "开启后，如果图片提供商实际返回的图片数量超过本次生成数量（--n），仅向 AI、上游回调或聊天窗口传递前 n 张；本次未设置生成数量时默认为 1。"
             },
             "llm_tool_restrict_private_network": {
                 "description": "限制LLM工具访问内网图片URL",

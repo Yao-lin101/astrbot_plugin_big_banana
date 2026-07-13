@@ -75,6 +75,10 @@ class GeminiProvider(StandardProvider):
         if response_modalities:
             context["generationConfig"]["responseModalities"] = response_modalities
 
+        system_prompt = self.provider_config.raw_config.get("system_prompt", "")
+        if system_prompt:
+            context["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+
         image_config = {}
         # 处理图片宽高比参数
         aspect_ratio = self.params.get(
