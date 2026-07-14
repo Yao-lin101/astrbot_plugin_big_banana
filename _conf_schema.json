@@ -65,9 +65,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": true,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -170,9 +170,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -263,9 +263,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -338,9 +338,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -413,9 +413,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -488,9 +488,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -563,9 +563,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -674,9 +674,9 @@
                     },
                     "enabled_as_default": {
                         "type": "bool",
-                        "description": "设为默认提供商",
+                        "description": "加入默认提供商集合",
                         "default": false,
-                        "hint": "加入默认提供商集合，当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
+                        "hint": "当用户不指定 --providers 参数时将从集合中按优先级回退使用。"
                     },
                     "fallback_order": {
                         "description": "默认提供商优先级",
@@ -876,7 +876,7 @@
                 "description": "参考图片",
                 "type": "string",
                 "default": "",
-                "hint": "填写以逗号分隔的图片文件名（包含后缀），图片文件放在插件数据目录的 refer_images 文件夹下，会优先作为参考图传递给上下文。提示词参数使用: --refer_images 文件名1,文件名2"
+                "hint": "填写以逗号分隔的图片文件名（包含后缀），图片文件放在插件数据目录的 refer_images 文件夹下，会优先作为参考图传递给上下文。此默认参数对命令调用和 LLM 图片/视频工具调用均生效，预设或本次调用中的 --refer_images 可覆盖它。提示词参数使用: --refer_images 文件名1,文件名2"
             },
             "gather_mode": {
                 "description": "启用收集模式",
@@ -1017,6 +1017,12 @@
                 "default": 3,
                 "hint": "每个Key的最大重试次数"
             },
+            "fallback_on_empty_result": {
+                "description": "空结果时继续回退",
+                "type": "bool",
+                "default": false,
+                "hint": "启用后，提供商未报错但没有返回任何图片时，会继续尝试下一个提供商。关闭后会立即返回该空结果。"
+            },
             "timeout": {
                 "description": "超时",
                 "type": "float",
@@ -1102,7 +1108,7 @@
     "preference_config": {
         "description": "偏好设置",
         "type": "object",
-        "hint": "以下配置因个人使用需求而异，暂无两全之策。跳过At头像的三个选项共用一个计数。",
+        "hint": "以下配置因个人使用需求而异，暂无两全之策。跳过At头像的两个选项共用一个计数。",
         "items": {
             "skip_at_first": {
                 "description": "跳过第一次@机器人",
@@ -1116,17 +1122,11 @@
                 "default": true,
                 "hint": "如果@对象是被引用消息的发送者，跳过一次@对象的头像收集。"
             },
-            "skip_llm_at_first": {
-                "description": "LLM工具跳过第一次@机器人",
-                "type": "bool",
-                "default": true,
-                "hint": "通过@机器人触发LLM函数调用工具，跳过一次机器人的头像收集。"
-            },
             "enable_at_avatar_note": {
-                "description": "添加At头像编号说明",
+                "description": "命令调用添加At头像编号说明",
                 "type": "bool",
                 "default": true,
-                "hint": "启用后，当@对象头像被作为参考图加入时，会在最终生成前向提示词底部追加英文编号说明，帮助AI判断每个@对应最终输入图片列表中的第几张图。关闭后仍会添加头像参考图，但不追加这段说明。"
+                "hint": "仅对命令调用生效。启用后，当@对象头像被作为参考图加入时，会在最终生成前向提示词底部追加英文编号说明，帮助AI判断每个@对应最终输入图片列表中的第几张图。关闭后仍会添加头像参考图，但不追加这段说明。"
             },
             "enable_drawing_message": {
                 "description": "命令调用是否发送生成中提示消息",

@@ -255,7 +255,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
         try:
             (
                 collected_images,
-                image_supplement_infos,
+                _,
                 collect_err,
             ) = await self._collect_images(plugin, event, params, image_references)
             if collect_err:
@@ -268,13 +268,6 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
                 )
                 if optimized_prompt is not None:
                     params["prompt"] = optimized_prompt
-
-            if plugin.preference_config.enable_at_avatar_note:
-                params["prompt"] = (
-                    plugin.drawing_command_handler._append_image_supplement_note(
-                        params.get("prompt", ""), image_supplement_infos
-                    )
-                )
 
             result = await plugin.drawing_pipeline.run(
                 params,
@@ -293,10 +286,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
         result: GenerationResult,
     ) -> None:
         """按本次请求的生成数量限制 LLM 图片工具结果。"""
-        if (
-            result.error_message
-            or not plugin.llm_tools_config.llm_tool_truncate_images
-        ):
+        if result.error_message or not plugin.llm_tools_config.llm_tool_truncate_images:
             return
 
         requested_count = params.get("n", 1)
@@ -311,6 +301,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
         if original_count <= requested_count:
             return
 
+        # 图片数量超过返回限制，需要处理
         result.images = result.images[:requested_count]
         result.urls = result.urls[:requested_count]
         logger.info(
@@ -352,11 +343,23 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
         ]
         images_with_bytes = [image for image in result.images if image.bytes]
         chain.extend(Comp.Image.fromBase64(image.base64) for image in images_with_bytes)
-        if result.urls:
+        indexed_urls = [
+            (index, url)
+            for index, url in enumerate(result.urls, start=1)
+            if url is not None
+        ]
+        if indexed_urls:
             if images_with_bytes:
-                chain.append(Comp.Plain("可用图片 URL：\n" + "\n".join(result.urls)))
+                chain.append(
+                    Comp.Plain(
+                        "可用图片 URL：\n"
+                        + "\n".join(
+                            f"image {index}: {url}" for index, url in indexed_urls
+                        )
+                    )
+                )
             else:
-                chain.extend(Comp.Image.fromURL(url) for url in result.urls)
+                chain.extend(Comp.Image.fromURL(url) for _index, url in indexed_urls)
         if len(chain) == 1:
             chain[0] = Comp.Plain(
                 "后台绘图任务已完成，但结果中没有可供查看或发送的图片。"
@@ -398,8 +401,15 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
             )
             for image in images_with_bytes
         )
-        if result.urls:
-            urls_text = "\n".join(result.urls)
+        indexed_urls = [
+            (index, url)
+            for index, url in enumerate(result.urls, start=1)
+            if url is not None
+        ]
+        if indexed_urls:
+            urls_text = "\n".join(
+                f"image {index}: {url}" for index, url in indexed_urls
+            )
             if not images_with_bytes:
                 # 仅在没有图片数据时保留结构化链接，避免模型收到重复图片。
                 response.content.extend(
@@ -409,7 +419,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
                         uri=AnyUrl(url),
                         mimeType="image/*",
                     )
-                    for index, url in enumerate(result.urls, start=1)
+                    for index, url in indexed_urls
                 )
             response.content.append(
                 mcp.types.TextContent(

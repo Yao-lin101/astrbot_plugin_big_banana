@@ -11,6 +11,8 @@ class CommonConfig:
     """是否启用智能重试"""
     max_retry: int = 3
     """最大重试次数"""
+    fallback_on_empty_result: bool = False
+    """提供商返回空结果时是否继续回退"""
     timeout: float = 300
     """请求超时时间, 单位: 秒"""
     proxy: str | None = None
@@ -27,10 +29,8 @@ class PreferenceConfig:
     """ 跳过第一次@机器人 """
     skip_quote_first: bool = False
     """ 跳过第一次引用@ """
-    skip_llm_at_first: bool = False
-    """ 跳过第一次LLM@ """
     enable_at_avatar_note: bool = True
-    """ 是否添加 At 头像参考图编号说明 """
+    """ 命令调用时是否添加 At 头像参考图编号说明 """
     enable_drawing_message: bool = True
     """ 是否启用图片生成中提示消息 """
     enable_llm_tool_drawing_message: bool = False

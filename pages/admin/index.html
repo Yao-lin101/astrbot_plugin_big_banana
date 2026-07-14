@@ -170,6 +170,15 @@
         <input type="number" class="text-input" id="cc_max_retry" min="0" max="20" placeholder="例如: 3" data-i18n-placeholder="pages.admin.general.max_retry.placeholder">
       </div>
 
+      <div class="form-group checkbox-row">
+        <label for="cc_fallback_on_empty_result" data-i18n="pages.admin.general.fallback_on_empty_result.label">空结果时继续回退</label>
+        <label class="switch">
+          <input type="checkbox" id="cc_fallback_on_empty_result">
+          <span class="switch-slider"></span>
+        </label>
+        <div class="hint-text" data-i18n="pages.admin.general.fallback_on_empty_result.hint">提供商未报错但没有返回图片时，继续尝试下一个提供商。</div>
+      </div>
+
       <div class="form-group">
         <label for="cc_timeout" data-i18n="pages.admin.general.timeout.label">请求超时时长</label>
         <div class="slider-container">
@@ -223,14 +232,6 @@
         <label for="pref_skip_quote_first" data-i18n="pages.admin.trigger.preferences.skip_quote_first">跳过第一次引用消息发送者头像</label>
         <label class="switch">
           <input type="checkbox" id="pref_skip_quote_first">
-          <span class="switch-slider"></span>
-        </label>
-      </div>
-
-      <div class="form-group checkbox-row">
-        <label for="pref_skip_llm_at_first" data-i18n="pages.admin.trigger.preferences.skip_llm_at_first">LLM 函数调用跳过第一次 @ 头像</label>
-        <label class="switch">
-          <input type="checkbox" id="pref_skip_llm_at_first">
           <span class="switch-slider"></span>
         </label>
       </div>

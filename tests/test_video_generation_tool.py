@@ -1,4 +1,6 @@
+import asyncio
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 from core.config.prompt_config import PromptConfigManager
 from core.llm_tools.image_generation import BigBananaImageGenerationTool
@@ -216,3 +218,26 @@ def test_returns_video_generation_failure_as_plain_text() -> None:
     tool_result = BigBananaVideoGenerationTool._build_model_tool_result(result)
 
     assert tool_result == "视频生成失败：模型当前访问量过大"
+
+
+def test_llm_video_tool_does_not_append_command_avatar_note() -> None:
+    pipeline_run = AsyncMock(return_value=GenerationResult())
+    plugin = SimpleNamespace(
+        sub_brain_config=SimpleNamespace(tool_enabled=False),
+        video_pipeline=SimpleNamespace(run=pipeline_run),
+    )
+    params = {"prompt": "animate portrait"}
+
+    with patch.object(
+        BigBananaVideoGenerationTool,
+        "_collect_images",
+        new=AsyncMock(return_value=([], ["- @123: avatar is image 1"], None)),
+    ):
+        asyncio.run(
+            BigBananaVideoGenerationTool()._generate_result(
+                plugin, SimpleNamespace(), params, ["@123"]
+            )
+        )
+
+    pipeline_run.assert_awaited_once()
+    assert params["prompt"] == "animate portrait"

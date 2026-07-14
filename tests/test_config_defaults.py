@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from core.schemas import LlmToolsConfig, PreferenceConfig
+from core.schemas import CommonConfig, LlmToolsConfig, PreferenceConfig
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -10,6 +10,16 @@ def test_background_tasks_are_disabled_by_default() -> None:
     assert PreferenceConfig().command_use_background_task is False
     assert LlmToolsConfig().llm_tool_use_background_task is False
     assert LlmToolsConfig().llm_tool_truncate_images is False
+
+
+def test_empty_results_do_not_fall_back_by_default() -> None:
+    assert CommonConfig().fallback_on_empty_result is False
+
+    schema = json.loads((ROOT / "_conf_schema.json").read_text(encoding="utf-8"))
+    assert (
+        schema["common_config"]["items"]["fallback_on_empty_result"]["default"]
+        is False
+    )
 
 
 def test_background_tasks_are_disabled_in_config_schema() -> None:
@@ -26,6 +36,22 @@ def test_background_tasks_are_disabled_in_config_schema() -> None:
     assert (
         schema["llm_tools"]["items"]["llm_tool_truncate_images"]["default"] is False
     )
+
+
+def test_deprecated_llm_avatar_skip_preference_is_removed() -> None:
+    schema = json.loads((ROOT / "_conf_schema.json").read_text(encoding="utf-8"))
+    preference_items = schema["preference_config"]["items"]
+
+    assert not hasattr(PreferenceConfig(), "skip_llm_at_first")
+    assert "skip_llm_at_first" not in preference_items
+
+
+def test_avatar_numbering_note_is_documented_as_command_only() -> None:
+    schema = json.loads((ROOT / "_conf_schema.json").read_text(encoding="utf-8"))
+    avatar_note = schema["preference_config"]["items"]["enable_at_avatar_note"]
+
+    assert "命令调用" in avatar_note["description"]
+    assert "仅对命令调用生效" in avatar_note["hint"]
 
 
 def test_vertex_anonymous_retry_controls_are_in_provider_template() -> None:

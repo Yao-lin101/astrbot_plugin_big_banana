@@ -322,7 +322,7 @@ class DrawingCommandHandler:
         msg_chain: list[BaseMessageComponent] = [
             Comp.Reply(id=event.message_obj.message_id)
         ]
-        result_urls = result.urls
+        result_urls = [url for url in result.urls if url is not None]
         video_urls = [video.url for video in result.videos if video.url]
         # 如果仅url，这里尝试检查有无url，无则报错
         if url_only:

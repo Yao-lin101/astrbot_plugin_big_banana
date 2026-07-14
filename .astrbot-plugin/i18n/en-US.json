@@ -579,6 +579,10 @@
         "description": "Maximum Retries",
         "hint": "The maximum number of retries for each Key"
       },
+      "fallback_on_empty_result": {
+        "description": "Fall Back on Empty Results",
+        "hint": "When enabled, a provider response with no error and no images falls back to the next provider. When disabled, the empty result is returned immediately."
+      },
       "timeout": {
         "description": "Timeout",
         "hint": "Unit: seconds, only valid for model requests. The timeout is calculated independently for each retry."
@@ -634,7 +638,7 @@
     },
     "preference_config": {
       "description": "Preferences",
-      "hint": "The following configurations vary depending on individual usage needs, and there is currently no one-size-fits-all solution. The three options for skipping the At avatar share a count.",
+      "hint": "The following configurations vary depending on individual usage needs, and there is currently no one-size-fits-all solution. The two options for skipping @mention avatars share a count.",
       "skip_at_first": {
         "description": "Skip the First @Bot Avatar",
         "hint": "When waking up a robot via @, skip collecting the robot's avatar once."
@@ -643,13 +647,9 @@
         "description": "Skip the First @Quoted User Avatar",
         "hint": "If the @ object is the sender of the referenced message, the avatar collection of the @ object is skipped once."
       },
-      "skip_llm_at_first": {
-        "description": "LLM Tool: Skip the First @Bot Avatar",
-        "hint": "Trigger the LLM function call tool through @robot to skip collecting the robot's avatar once."
-      },
       "enable_at_avatar_note": {
-        "description": "Add Numbering Notes for @Mention Avatars",
-        "hint": "After enabling, when the @ object avatar is added as a reference image, an English number description will be appended to the bottom of the prompt word before final generation, helping the AI ​​to determine which image in the final input image list each @ corresponds to. After closing, the avatar reference image will still be added, but this description will not be added."
+        "description": "Add @Mention Avatar Numbering Notes for Commands",
+        "hint": "This setting only applies to command calls. When enabled, an English numbering note is appended to the prompt when an @mentioned user's avatar is added as a reference image, helping the AI identify its position in the final input image list. When disabled, the avatar is still added without the note."
       },
       "enable_drawing_message": {
         "description": "Send Progress Message for Commands",
@@ -825,13 +825,14 @@
         "preset_append": { "label": "Append User Input to Preset Prompts", "hint": "If a prompt does not contain the {{user_text}} placeholder, the user's input is appended automatically." },
         "smart_retry": { "label": "Enable Smart Retry" },
         "max_retry": { "label": "Maximum Retries", "placeholder": "Example: 3" },
+        "fallback_on_empty_result": { "label": "Fall Back on Empty Results", "hint": "Try the next provider when a provider returns no error and no images." },
         "timeout": { "label": "Request Timeout" },
         "proxy": { "label": "HTTP Proxy Address", "placeholder": "Example: http://127.0.0.1:7890" }
       },
       "trigger": {
         "prefix": { "title": "Prefixes and Trigger Modes", "coexist_enabled": "Enable Mixed Mode (With or Without Prefix)", "provider_prefix": "Enable Provider Prefixes", "add": "＋ Add Command Prefix" },
         "preferences": {
-          "title": "Trigger Preferences", "skip_at_first": "Skip the First Mentioned Bot Avatar", "skip_quote_first": "Skip the First Quoted Sender Avatar", "skip_llm_at_first": "LLM Tool Calls: Skip the First Mentioned Avatar", "enable_drawing_message": "Enable Generation Progress Messages", "send_text_when_no_image": "Send Text Responses When No Image Is Returned", "send_text_when_no_image_hint": "When enabled, a response containing text but no image is sent as the result.", "drawing_message": "Generation Progress Message", "drawing_message_placeholder": "🎨 Generating your image, please wait...", "group_cooldown": "Group Image Generation Cooldown (Seconds)", "group_cooldown_hint": "Set the cooldown between image commands or tool calls for each group. Use 0 for no limit.", "use_background_task": "Run Image Generation as a Background Task", "use_background_task_hint": "When disabled, the plugin waits for image generation to finish before sending the result.", "background_task_send_type": "Background Task Message Delivery", "send_type_event": "Event Message (Passive)", "send_type_active": "Active Message", "background_task_send_type_hint": "Choose how completed background tasks send messages. Event messages (passive) are used by default."
+          "title": "Trigger Preferences", "skip_at_first": "Skip the First Mentioned Bot Avatar", "skip_quote_first": "Skip the First Quoted Sender Avatar", "enable_drawing_message": "Enable Generation Progress Messages", "send_text_when_no_image": "Send Text Responses When No Image Is Returned", "send_text_when_no_image_hint": "When enabled, a response containing text but no image is sent as the result.", "drawing_message": "Generation Progress Message", "drawing_message_placeholder": "🎨 Generating your image, please wait...", "group_cooldown": "Group Image Generation Cooldown (Seconds)", "group_cooldown_hint": "Set the cooldown between image commands or tool calls for each group. Use 0 for no limit.", "use_background_task": "Run Image Generation as a Background Task", "use_background_task_hint": "When disabled, the plugin waits for image generation to finish before sending the result.", "background_task_send_type": "Background Task Message Delivery", "send_type_event": "Event Message (Passive)", "send_type_active": "Active Message", "background_task_send_type_hint": "Choose how completed background tasks send messages. Event messages (passive) are used by default."
         },
         "tools": { "title": "Function-Calling Tools", "image_enabled": "Enable Image Generation Tool", "video_enabled": "Enable Video Generation Tool", "use_background_task": "Run Tool Calls as Background Tasks", "use_background_task_hint": "When disabled, function calls wait for image generation to finish before returning." }
       },

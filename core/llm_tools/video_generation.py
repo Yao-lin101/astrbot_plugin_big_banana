@@ -193,7 +193,7 @@ class BigBananaVideoGenerationTool(BaseMediaGenerationTool):
         image_references: list[str] | None,
     ) -> GenerationResult:
         try:
-            images, supplement_infos, error = await self._collect_images(
+            images, _, error = await self._collect_images(
                 plugin, event, params, image_references
             )
             if error:
@@ -207,12 +207,6 @@ class BigBananaVideoGenerationTool(BaseMediaGenerationTool):
                 if optimized_prompt is not None:
                     params["prompt"] = optimized_prompt
 
-            if plugin.preference_config.enable_at_avatar_note:
-                params["prompt"] = (
-                    plugin.drawing_command_handler._append_image_supplement_note(
-                        params.get("prompt", ""), supplement_infos
-                    )
-                )
             return await plugin.video_pipeline.run(params, image_list=images)
         except Exception as exc:
             logger.error(f"[BIG BANANA] LLM 工具视频生成失败: {exc}", exc_info=True)

@@ -58,6 +58,37 @@ def test_r2_save_and_url_mode_share_one_upload() -> None:
     assert result.urls == ["https://cdn.example.com/image.png"]
 
 
+def test_url_mode_preserves_failed_upload_position() -> None:
+    plugin = build_plugin(
+        r2_save=False,
+        uploaded_urls=[None, "https://cdn.example.com/second.png"],
+    )
+    plugin.dispatcher.dispatch = AsyncMock(
+        return_value=GenerationResult(images=[build_image(), build_image()])
+    )
+    pipeline = DrawingPipeline(plugin)
+
+    result = asyncio.run(pipeline.run({"url": True}, []))
+
+    assert result.urls == [None, "https://cdn.example.com/second.png"]
+
+
+def test_url_mode_returns_empty_urls_when_all_uploads_fail() -> None:
+    plugin = build_plugin(
+        r2_save=False,
+        uploaded_urls=[None, None],
+    )
+    plugin.dispatcher.dispatch = AsyncMock(
+        return_value=GenerationResult(images=[build_image(), build_image()])
+    )
+    pipeline = DrawingPipeline(plugin)
+
+    result = asyncio.run(pipeline.run({"url": True}, []))
+
+    assert result.urls == []
+    assert result.error_message is not None
+
+
 def test_incomplete_hoster_does_not_block_normal_image_result() -> None:
     plugin = build_plugin(r2_save=True, hoster_enabled=False)
     pipeline = DrawingPipeline(plugin)

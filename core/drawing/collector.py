@@ -58,6 +58,8 @@ class ImageCollector:
         self._processed_events: set[str] = set()
         self._processed_image_urls: set[str | Path] = set()
         self._supplemented_avatar_ids: set[str] = set()
+        # LLM 工具读取到失败信息后会合并并返回给模型。
+        self.reference_failures: list[str] = []
 
     async def add_refer_images(self) -> None:
         """获取参考图片文件"""
@@ -82,10 +84,14 @@ class ImageCollector:
                         logger.warning(
                             f"[BIG BANANA] 参考图片路径无效，已跳过：{filename}，错误：{e}"
                         )
+                        self._record_reference_failure(filename, "参考图片路径无效")
                         continue
                     if path != allowed_root and allowed_root not in path.parents:
                         logger.warning(
                             f"[BIG BANANA] 参考图片超出 refer_images 目录，已跳过：{filename}"
+                        )
+                        self._record_reference_failure(
+                            filename, "参考图片超出 refer_images 目录"
                         )
                         continue
                     self.urls.append(path)
@@ -141,11 +147,6 @@ class ImageCollector:
                         and event.is_at_or_wake_command
                         and self.plugin.preference_config.skip_at_first
                     )  # 通过At唤醒机器人，跳过一次
-                    or (
-                        user_id == self_id
-                        and self.plugin.preference_config.skip_llm_at_first
-                        and self.is_llm_tool
-                    )  # 通过At唤醒机器人，且是函数调用工具，跳过一次
                 ):
                     skipped_at_avatar = True
                     continue
@@ -218,8 +219,12 @@ class ImageCollector:
                         f"[BIG BANANA] 无法获取 {self.event.platform_meta.name} "
                         f"用户 {user_id} 的头像，已跳过该引用"
                     )
+                    self._record_reference_failure(ref, "无法获取该用户头像")
                 else:
                     self.avatar_mappings[user_id] = avatar_url
+                    # 显式头像也放入 urls，以保持与其他显式引用的输入顺序
+                    # 确保@和url混合输入顺序一致，而非@头像始终在最后收集
+                    self.urls.append(avatar_url)
                 continue
 
             # 支持 Giftia 图片哈希 (16位 xxh3 或 32位 md5)
@@ -322,11 +327,11 @@ class ImageCollector:
 
     def get_final_urls(self) -> list[str | Path]:
         """汇总所有图片url"""
-        return [
-            *self.urls,
-            *self.avatar_mappings.values(),
-            *self.supplement_urls,
-        ]
+        final_urls = list(self.urls)
+        for image_url in [*self.avatar_mappings.values(), *self.supplement_urls]:
+            if image_url not in final_urls:
+                final_urls.append(image_url)
+        return final_urls
 
     def check_urls_limit(self) -> bool:
         """检查图片url是否满足最低要求，如果不满足则返回 False，否则返回 True"""
@@ -353,6 +358,11 @@ class ImageCollector:
         if len(pending_urls) > remaining_slots:
             skipped_urls = pending_urls[remaining_slots:]
             self._processed_image_urls.update(skipped_urls)
+            if self.is_llm_tool:
+                for skipped_url in skipped_urls:
+                    self._record_reference_failure(
+                        skipped_url, f"超出 max_images={self.max_images} 的限制"
+                    )
             pending_urls = pending_urls[:remaining_slots]
             logger.warning(
                 f"[BIG BANANA] 本次最多还能收集 {remaining_slots} 张图片，"
@@ -399,6 +409,8 @@ class ImageCollector:
                 logger.warning(
                     f"[BIG BANANA] 图片下载/读取失败，已被跳过: {original_url}"
                 )
+                if self.is_llm_tool:
+                    self._record_reference_failure(original_url, "图片下载或读取失败")
                 continue
 
             existing_index = image_bytes_to_index.get(fetched.bytes)
@@ -429,7 +441,13 @@ class ImageCollector:
 
     def _record_image_supplement_info(self, url: str | Path, image_index: int) -> None:
         """Record avatar annotations after a reference image has been downloaded."""
+        if self.is_llm_tool:
+            return
         for user_id, avatar_url in self.avatar_mappings.items():
             if avatar_url == url:
                 info = f"- @{user_id}: avatar is image {image_index}"
                 self.image_supplement_infos.append(info)
+
+    def _record_reference_failure(self, reference: str | Path, reason: str) -> None:
+        failure = f"参考图 {reference!s} 处理失败：{reason}"
+        self.reference_failures.append(failure)

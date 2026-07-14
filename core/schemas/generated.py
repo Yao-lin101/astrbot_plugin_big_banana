@@ -12,7 +12,7 @@ class GenerationResult:
     """ 生成的图片列表 """
     videos: list[VideoResource] = field(default_factory=list)
     """ 生成的视频列表 """
-    urls: list[str] = field(default_factory=list)
-    """ 上传到图床的 URL 列表 """
+    urls: list[str | None] = field(default_factory=list)
+    """与图片顺序对齐的 URL 列表；无法取得 URL 的位置为 None。"""
     error_message: str | None = field(default=None, init=True)
     """ 错误消息 """

@@ -331,6 +331,7 @@ function loadData() {
     document.getElementById('cc_preset_append').checked = cc.preset_append !== false;
     document.getElementById('cc_smart_retry').checked = cc.smart_retry !== false;
     if (cc.max_retry !== undefined) document.getElementById('cc_max_retry').value = cc.max_retry;
+    document.getElementById('cc_fallback_on_empty_result').checked = cc.fallback_on_empty_result === true;
     if (cc.timeout !== undefined) document.getElementById('cc_timeout').value = cc.timeout;
     document.getElementById('cc_proxy').value = cc.proxy || '';
 
@@ -357,7 +358,6 @@ function loadData() {
     var pref = config.preference_config || {};
     document.getElementById('pref_skip_at_first').checked = pref.skip_at_first !== false;
     document.getElementById('pref_skip_quote_first').checked = pref.skip_quote_first !== false;
-    document.getElementById('pref_skip_llm_at_first').checked = pref.skip_llm_at_first !== false;
     document.getElementById('pref_enable_drawing_message').checked = pref.enable_drawing_message !== false;
     document.getElementById('pref_send_text_when_no_image').checked = !!pref.send_text_when_no_image;
     document.getElementById('pref_drawing_message').value = pref.drawing_message || '🎨 在画了，请稍等一会...';
@@ -491,6 +491,7 @@ function saveAll() {
     preset_append: document.getElementById('cc_preset_append').checked,
     smart_retry: document.getElementById('cc_smart_retry').checked,
     max_retry: parseInt(document.getElementById('cc_max_retry').value),
+    fallback_on_empty_result: document.getElementById('cc_fallback_on_empty_result').checked,
     timeout: parseFloat(document.getElementById('cc_timeout').value),
     proxy: document.getElementById('cc_proxy').value.trim()
   };
@@ -528,7 +529,6 @@ function saveAll() {
   updatedConfig.preference_config = Object.assign({}, config.preference_config || {}, {
     skip_at_first: document.getElementById('pref_skip_at_first').checked,
     skip_quote_first: document.getElementById('pref_skip_quote_first').checked,
-    skip_llm_at_first: document.getElementById('pref_skip_llm_at_first').checked,
     enable_drawing_message: document.getElementById('pref_enable_drawing_message').checked,
     send_text_when_no_image: document.getElementById('pref_send_text_when_no_image').checked,
     drawing_message: document.getElementById('pref_drawing_message').value.trim(),

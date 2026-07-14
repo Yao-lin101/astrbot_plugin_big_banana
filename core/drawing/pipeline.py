@@ -79,7 +79,7 @@ class DrawingPipeline:
         # URL 模式
         if url_mode:
             # 每张图片优先使用图床 URL；上传失败时使用提供商原始 URL。
-            result_urls: list[str] = []
+            result_urls: list[str | None] = []
             for image, uploaded_url in zip(dispatch_result.images, uploaded_urls):
                 if uploaded_url:
                     result_urls.append(uploaded_url)
@@ -87,12 +87,15 @@ class DrawingPipeline:
                     ("http://", "https://")
                 ):
                     result_urls.append(image.url)
+                else:
+                    result_urls.append(None)
 
-            if result_urls:
-                if len(result_urls) < len(dispatch_result.images):
+            available_url_count = sum(url is not None for url in result_urls)
+            if available_url_count:
+                if available_url_count < len(dispatch_result.images):
                     logger.warning(
                         f"[BIG BANANA] 共生成 {len(dispatch_result.images)} 张图片，"
-                        f"其中 {len(result_urls)} 张取得了可用 URL，将返回现有结果"
+                        f"其中 {available_url_count} 张取得了可用 URL，将返回现有结果"
                     )
                 return GenerationResult(
                     images=dispatch_result.images,

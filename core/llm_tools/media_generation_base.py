@@ -244,8 +244,12 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
             params=params,
             is_llm_tool=True,
         )
+        # 提示词或全局默认参数中的固定参考图对 LLM 工具同样生效。
+        await collector.add_refer_images()
         if image_references:
             await collector.add_explicit_references(image_references)
+        if collector.reference_failures:
+            return [], [], "\n".join(collector.reference_failures)
         if not collector.check_urls_limit():
             return (
                 [],
@@ -254,6 +258,8 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                 f"最少需要 {collector.min_images} 张。请补充 image_references 后重试。",
             )
         images = await collector.fetch_collected_images()
+        if collector.reference_failures:
+            return [], [], "\n".join(collector.reference_failures)
         if not collector.check_images_limit():
             return (
                 [],

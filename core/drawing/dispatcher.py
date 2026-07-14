@@ -76,7 +76,13 @@ class ProviderDispatcher:
                 image_list=provider_image_list,
             )
             if result.error_message is None:
-                return result
+                if result.images:
+                    return result
+                if not self.plugin.common_config.fallback_on_empty_result:
+                    return result
+                last_err = f"提供商 {provider_config.name} 未返回图片"
+                logger.warning(f"[BIG BANANA] {last_err}，继续尝试下一个提供商")
+                continue
             last_err = result.error_message
 
         return GenerationResult(error_message=last_err)
