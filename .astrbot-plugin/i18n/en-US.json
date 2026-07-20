@@ -40,12 +40,12 @@
             "hint": "Leave blank to not pass this parameter."
           },
           "max_refresh": {
-            "description": "Token maximum refresh times",
-            "hint": "After obtaining the Token for the first time, the maximum number of times the Token is reacquired is allowed; when the upper limit is reached, switch to the next provider."
+            "description": "Maximum recaptchaToken refreshes",
+            "hint": "Maximum number of times recaptchaToken may be reacquired after it is obtained initially."
           },
-          "retry_before_switch": {
-            "description": "Number of retries before switching",
-            "hint": "After the cumulative number of verification failures or common request failures reaches this number, switch to the next provider."
+          "max_recaptcha_retry": {
+            "description": "Maximum retries per recaptchaToken",
+            "hint": "Maximum retries allowed for each recaptchaToken before it is refreshed."
           },
           "retry_delay": {
             "description": "Retry delay",
