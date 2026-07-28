@@ -21,6 +21,8 @@ def test_llm_tool_presets_are_disabled_when_not_configured() -> None:
     assert LlmToolsConfig().llm_video_tool_preset_name == ""
     assert llm_tool_items["llm_tool_preset_name"]["default"] == ""
     assert llm_tool_items["llm_video_tool_preset_name"]["default"] == ""
+    assert LlmToolsConfig().llm_tool_max_tasks_per_session == 1
+    assert llm_tool_items["llm_tool_max_tasks_per_session"]["default"] == 1
 
 
 def test_empty_results_do_not_fall_back_by_default() -> None:

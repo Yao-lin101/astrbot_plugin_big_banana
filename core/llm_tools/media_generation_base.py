@@ -42,6 +42,19 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
         if plugin.task_manager.is_running(task_id):
             return "该任务已在执行中，请勿重复操作。"
 
+        max_tasks = plugin.llm_tools_config.llm_tool_max_tasks_per_session
+        if (
+            max_tasks > 0
+            and plugin.task_manager.get_session_llm_task_count(unified_msg_origin)
+            >= max_tasks
+        ):
+            return (
+                f"当前会话已有正在执行的{self.media_name}生成任务（后台处理中），"
+                f"已达会话上限（{max_tasks}个）。"
+                f"请告知用户上一个{self.media_name}仍在生成中，需等待该任务完成后再开启新任务，"
+                f"切勿重复调用{self.generation_name}工具。"
+            )
+
         current_task = asyncio.current_task()
         if current_task:
             plugin.task_manager.start(task_id, current_task)
@@ -79,6 +92,7 @@ class BaseMediaGenerationTool(FunctionTool[AstrAgentContext], ABC):
                     )
                 )
                 plugin.task_manager.start(task_id, task)
+                plugin.task_manager.start_llm_task(unified_msg_origin, task)
                 if not use_background_callback:
                     return (
                         f"后台{self.generation_name}任务已启动，完成后会直接把"

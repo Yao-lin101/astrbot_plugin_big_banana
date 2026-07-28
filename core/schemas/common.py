@@ -101,3 +101,6 @@ class LlmToolsConfig:
     """ 后台任务完成回调插件 """
     background_callback_method: str = ""
     """ 后台任务完成回调方法 """
+    llm_tool_max_tasks_per_session: int = 1
+    """ 每个会话 LLM 工具后台任务并发上限（0 为不限制） """
+

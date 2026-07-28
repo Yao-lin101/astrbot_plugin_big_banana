@@ -14,6 +14,7 @@ class DrawingTaskManager:
         """初始化任务表。"""
         self.running_tasks: dict[str, asyncio.Task] = {}
         self._tracked_tasks: set[asyncio.Task] = set()
+        self.session_llm_tasks: dict[str, set[asyncio.Task]] = {}
 
     @staticmethod
     def build_task_id(event: AstrMessageEvent) -> str:
@@ -42,6 +43,37 @@ class DrawingTaskManager:
         """移除会话已结束的绘图任务。"""
         self.running_tasks.pop(task_id, None)
 
+    def get_session_llm_task_count(self, session_id: str) -> int:
+        """获取指定会话中正在运行的 LLM 工具后台任务数。"""
+        tasks = self.session_llm_tasks.get(session_id)
+        if not tasks:
+            if tasks is not None:
+                self.session_llm_tasks.pop(session_id, None)
+            return 0
+        running = [task for task in list(tasks) if not task.done()]
+        if not running:
+            self.session_llm_tasks.pop(session_id, None)
+            return 0
+        if len(running) != len(tasks):
+            self.session_llm_tasks[session_id] = set(running)
+        return len(running)
+
+    def start_llm_task(self, session_id: str, task: asyncio.Task) -> None:
+        """登记指定会话的 LLM 工具后台任务。"""
+        if session_id not in self.session_llm_tasks:
+            self.session_llm_tasks[session_id] = set()
+        self.session_llm_tasks[session_id].add(task)
+        self._tracked_tasks.add(task)
+        task.add_done_callback(lambda _t: self.finish_llm_task(session_id, task))
+
+    def finish_llm_task(self, session_id: str, task: asyncio.Task) -> None:
+        """移除指定会话已结束的 LLM 工具后台任务。"""
+        tasks = self.session_llm_tasks.get(session_id)
+        if tasks is not None:
+            tasks.discard(task)
+            if not tasks:
+                self.session_llm_tasks.pop(session_id, None)
+
     async def cancel_all(self) -> None:
         """取消并等待所有登记过且尚未结束的绘图任务。"""
         current_task = asyncio.current_task()
@@ -56,3 +88,4 @@ class DrawingTaskManager:
             await asyncio.gather(*tasks, return_exceptions=True)
         self.running_tasks.clear()
         self._tracked_tasks.clear()
+        self.session_llm_tasks.clear()
