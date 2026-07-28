@@ -57,13 +57,12 @@ class DrawingTaskManager:
         if len(running) != len(tasks):
             self.session_llm_tasks[session_id] = set(running)
         return len(running)
-
     def start_llm_task(self, session_id: str, task: asyncio.Task) -> None:
         """登记指定会话的 LLM 工具后台任务。"""
         if session_id not in self.session_llm_tasks:
             self.session_llm_tasks[session_id] = set()
         self.session_llm_tasks[session_id].add(task)
-        self._tracked_tasks.add(task)
+        # 仅负责会话级别 LLM 任务的登记与清理，通用任务追踪由上层 start(...) 负责
         task.add_done_callback(lambda _t: self.finish_llm_task(session_id, task))
 
     def finish_llm_task(self, session_id: str, task: asyncio.Task) -> None:
