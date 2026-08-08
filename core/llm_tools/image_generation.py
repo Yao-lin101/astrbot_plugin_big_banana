@@ -12,6 +12,7 @@ from astrbot.core.astr_agent_context import AstrAgentContext
 from astrbot.core.message.message_event_result import MessageChain
 
 from ..schemas import GenerationResult
+from ..utils import build_image_component
 from .media_generation_base import BaseMediaGenerationTool
 
 if TYPE_CHECKING:
@@ -326,7 +327,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
     def _build_callback_result_chain(
         result: GenerationResult | str,
     ) -> MessageChain:
-        """将生成结果或发送状态包装为供上游交给 AI 的消息链。
+        """构造传递给后台回调插件的消息链。
 
         Args:
             result: 尚未发送的图片生成结果，或图片发送后的文字状态。
@@ -340,11 +341,7 @@ class BigBananaImageGenerationTool(BaseMediaGenerationTool):
 
         if result.error_message:
             error_chain: list[BaseMessageComponent] = [
-                Comp.Plain(
-                    f"后台绘图任务执行失败：{result.error_message}。"
-                    "请根据失败原因决定是否调整参数重试或告知用户，"
-                    "不要声称图片已经生成成功。"
-                )
+                Comp.Plain(f"❌ 后台绘图任务执行失败：{result.error_message}")
             ]
             return MessageChain(chain=error_chain)
 

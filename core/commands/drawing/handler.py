@@ -7,7 +7,12 @@ import astrbot.api.message_components as Comp
 from astrbot.api import logger
 from astrbot.core.message.message_event_result import MessageChain
 
-from ...drawing import DrawingPipeline, ImageSaver, parse_params
+from ...drawing import (
+    DrawingPipeline,
+    ImageSaver,
+    parse_params,
+)
+from ...utils import build_image_component, build_reply_component
 from ...drawing.collector import ImageCollector
 from ...schemas import MAX_SIZE_B64_LEN, GenerationResult
 from .gather_session import DrawingGatherSession
@@ -58,12 +63,11 @@ class DrawingCommandHandler:
         cooldown_check = self.plugin.cooldown_guard.check(event)
         if not cooldown_check.allowed:
             logger.info(cooldown_check.log_message)
-            yield event.chain_result(
-                [
-                    Comp.Reply(id=event.message_obj.message_id),
-                    Comp.Plain(f"❌ {cooldown_check.message}"),
-                ]
-            )
+            chain: list[BaseMessageComponent] = []
+            if reply := build_reply_component(event):
+                chain.append(reply)
+            chain.append(Comp.Plain(f"❌ {cooldown_check.message}"))
+            yield event.chain_result(chain)
             return
 
         # 检查是否重复执行
@@ -118,14 +122,15 @@ class DrawingCommandHandler:
         if not image_collector.check_images_limit():
             await image_collector.supplement_avatars()
         if not image_collector.check_images_limit():
-            yield event.chain_result(
-                [
-                    Comp.Reply(id=event.message_obj.message_id),
-                    Comp.Plain(
-                        f"❌ 图片数量不足，当前仅 {len(image_collector.images)} 张，最少需要 {image_collector.min_images} 张"
-                    ),
-                ]
+            chain: list[BaseMessageComponent] = []
+            if reply := build_reply_component(event):
+                chain.append(reply)
+            chain.append(
+                Comp.Plain(
+                    f"❌ 图片数量不足，当前仅 {len(image_collector.images)} 张，最少需要 {image_collector.min_images} 张"
+                )
             )
+            yield event.chain_result(chain)
             return
 
         # 后台任务会超出当前事件生命周期。AstrBot 会在事件结束时清理
@@ -233,10 +238,14 @@ class DrawingCommandHandler:
                     == "video_generation"
                     else "图片"
                 )
-                msg_chain: list[BaseMessageComponent] = [
-                    Comp.Reply(id=event.message_obj.message_id),
-                    Comp.Plain(f"❌ {media_name}生成失败：{result.error_message}"),
-                ]
+                msg_chain: list[BaseMessageComponent] = []
+                if reply := build_reply_component(
+                    event, is_command=True, plugin=getattr(self, "plugin", None)
+                ):
+                    msg_chain.append(reply)
+                msg_chain.append(
+                    Comp.Plain(f"❌ {media_name}生成失败：{result.error_message}")
+                )
             else:
                 # 成功，标记冷却时间
                 self.plugin.cooldown_guard.mark_cooldown(event.get_group_id())
@@ -310,9 +319,11 @@ class DrawingCommandHandler:
         Returns:
             可直接发送到消息平台的消息组件列表。
         """
-        msg_chain: list[BaseMessageComponent] = [
-            Comp.Reply(id=event.message_obj.message_id)
-        ]
+        msg_chain: list[BaseMessageComponent] = []
+        if reply := build_reply_component(
+            event, is_command=True, plugin=getattr(self, "plugin", None)
+        ):
+            msg_chain.append(reply)
         result_urls = [url for url in result.urls if url is not None]
         video_urls = [video.url for video in result.videos if video.url]
         # 如果仅url，这里尝试检查有无url，无则报错
@@ -343,12 +354,10 @@ class DrawingCommandHandler:
                 msg_chain.append(Comp.File(name=name_, file=str(path_)))
             return msg_chain
 
-        # 其他平台目前默认不特殊处理图片大小限制
-        if images_with_bytes:
-            msg_chain.extend(
-                Comp.Image.fromBase64(image.base64) for image in images_with_bytes
-            )
-        # 只有urls，那么应该是下载失败了，直接发送url吧
+        if result.images:
+            for index, image in enumerate(result.images):
+                fallback_url = result.urls[index] if index < len(result.urls) else None
+                msg_chain.append(build_image_component(image, fallback_url=fallback_url))
         elif result_urls:
             msg_chain.append(Comp.Plain("\n".join(result_urls)))
         else:
